@@ -98,6 +98,27 @@ func TestAicostBuildsGrokImagineVideo15RequestWithMultipartInputReference(t *tes
 	assert.Equal(t, []any{"data:image/png;base64,ZmFrZS1wbmc="}, payload["images"])
 }
 
+func TestAicostGrokImagineVideo15UsesPerCallBilling(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	request := httptest.NewRequest(http.MethodPost, "/v1/videos", strings.NewReader(`{
+		"model":"grok-imagine-video-1.5-preview",
+		"prompt":"walk forward",
+		"input_reference":{"image_url":"https://cdn.example/scene.png"},
+		"seconds":"10",
+		"size":"1280x720"
+	}`))
+	request.Header.Set("Content-Type", "application/json")
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+	context.Request = request
+
+	info := &relaycommon.RelayInfo{ChannelMeta: &relaycommon.ChannelMeta{}, TaskRelayInfo: &relaycommon.TaskRelayInfo{}}
+	adaptor := &TaskAdaptor{}
+	require.Nil(t, adaptor.ValidateRequestAndSetAction(context, info))
+
+	assert.Nil(t, adaptor.EstimateBilling(context, info))
+}
+
 func TestAicostRejectsGrokImagineVideo15WithoutReferenceImage(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	request := httptest.NewRequest(http.MethodPost, "/v1/videos", strings.NewReader(`{

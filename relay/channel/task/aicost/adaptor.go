@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
@@ -168,22 +167,6 @@ func (a *TaskAdaptor) ValidateRequestAndSetAction(c *gin.Context, info *relaycom
 		Size:    size,
 	})
 	return nil
-}
-
-func (a *TaskAdaptor) EstimateBilling(c *gin.Context, _ *relaycommon.RelayInfo) map[string]float64 {
-	payload, ok := c.Get("aicost_task_request")
-	if !ok {
-		return nil
-	}
-	req, ok := payload.(requestPayload)
-	if !ok {
-		return nil
-	}
-	seconds, err := strconv.Atoi(req.Seconds)
-	if err != nil || seconds <= 0 {
-		return nil
-	}
-	return map[string]float64{"seconds": float64(seconds)}
 }
 
 func (a *TaskAdaptor) BuildRequestURL(_ *relaycommon.RelayInfo) (string, error) {
