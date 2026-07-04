@@ -1,0 +1,42 @@
+# New-API Docker Compose Configuration
+# 
+# Quick Start:
+#   1. docker-compose up -d
+#   2. Access at http://localhost:3000
+#
+# Using MySQL instead of PostgreSQL:
+#   1. Comment out the postgres service and SQL_DSN line 15
+#   2. Uncomment the mysql service and SQL_DSN line 16
+#   3. Uncomment mysql in depends_on (line 28)
+#   4. Uncomment mysql_data in volumes section (line 64)
+#
+# ⚠️  IMPORTANT: Change all default passwords before deploying to production!
+
+version: '3.4' # For compatibility with older Docker versions
+
+services:
+  redis:
+    image: redis:latest
+    container_name: new-api-dev-redis
+    restart: unless-stopped
+    command: ["redis-server", "--requirepass", "123456"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - new-api-dev-redis:/data
+
+  postgres:
+    image: postgres:15
+    container_name: new-api-dev-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: 123456
+      POSTGRES_DB: new-api
+    ports:
+      - "5432:5432"
+    volumes:
+      - new-api-dev-postgres:/var/lib/postgresql/data
+volumes:
+  new-api-dev-postgres:
+  new-api-dev-redis:

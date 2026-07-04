@@ -159,6 +159,9 @@ func VideoProxy(c *gin.Context) {
 	}
 
 	for key, values := range resp.Header {
+		if isCorsResponseHeader(key) {
+			continue
+		}
 		for _, value := range values {
 			c.Writer.Header().Add(key, value)
 		}
@@ -169,6 +172,10 @@ func VideoProxy(c *gin.Context) {
 	if _, err = io.Copy(c.Writer, resp.Body); err != nil {
 		logger.LogError(c.Request.Context(), fmt.Sprintf("Failed to stream video content: %s", err.Error()))
 	}
+}
+
+func isCorsResponseHeader(key string) bool {
+	return strings.HasPrefix(strings.ToLower(key), "access-control-")
 }
 
 func writeVideoDataURL(c *gin.Context, dataURL string) error {

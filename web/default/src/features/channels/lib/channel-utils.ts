@@ -102,6 +102,7 @@ export function getChannelTypeIcon(type: number): string {
     55: 'OpenAI', // Sora
     54: 'Doubao', // DoubaoVideo
     56: 'Replicate', // Replicate
+    59: 'OpenAI', // Aicost
 
     // Tools & Platforms
     37: 'Dify', // Dify
@@ -767,3 +768,4 @@ export function deduplicateKeys(keysText: string): {
 export function getKeyPromptForType(type: number): string {
   return TYPE_TO_KEY_PROMPT[type] || 'Enter API key for this channel'
 }
+

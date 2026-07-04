@@ -15,6 +15,7 @@ import (
 	"github.com/QuantumNous/new-api/relay/channel/lingyiwanwu"
 	"github.com/QuantumNous/new-api/relay/channel/minimax"
 	"github.com/QuantumNous/new-api/relay/channel/moonshot"
+	"github.com/QuantumNous/new-api/relay/channel/task/aicost"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
 	"github.com/QuantumNous/new-api/relay/helper"
 	"github.com/QuantumNous/new-api/service"
@@ -47,6 +48,14 @@ func init() {
 				OwnedBy: channelName,
 			})
 		}
+	}
+	for _, modelName := range aicost.ModelList {
+		openAIModels = append(openAIModels, dto.OpenAIModels{
+			Id:      modelName,
+			Object:  "model",
+			Created: 1626777600,
+			OwnedBy: aicost.ChannelName,
+		})
 	}
 	for _, modelName := range ai360.ModelList {
 		openAIModels = append(openAIModels, dto.OpenAIModels{
