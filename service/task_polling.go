@@ -514,6 +514,12 @@ func updateVideoSingleTask(ctx context.Context, adaptor TaskPollingAdaptor, ch *
 	quota := task.Quota
 
 	task.Status = model.TaskStatus(taskResult.Status)
+	if taskResult.StartTime > 0 {
+		task.StartTime = taskResult.StartTime
+	}
+	if taskResult.FinishTime > 0 {
+		task.FinishTime = taskResult.FinishTime
+	}
 	switch taskResult.Status {
 	case model.TaskStatusSubmitted:
 		task.Progress = taskcommon.ProgressSubmitted

@@ -284,3 +284,9 @@ func TestListModelsTokenLimitIncludesTieredBillingModel(t *testing.T) {
 	require.NotContains(t, ids, "zz-token-tiered-missing-expr-model")
 	require.NotContains(t, ids, "zz-token-unpriced-model")
 }
+
+func TestDashboardModelListIncludesAPIMartVideoModel(t *testing.T) {
+	models := channelId2Models[constant.ChannelTypeAPIMart]
+
+	require.Contains(t, models, "grok-imagine-1.5-video-6s")
+}

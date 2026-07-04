@@ -16,6 +16,7 @@ import (
 	"github.com/QuantumNous/new-api/relay/channel/minimax"
 	"github.com/QuantumNous/new-api/relay/channel/moonshot"
 	"github.com/QuantumNous/new-api/relay/channel/task/aicost"
+	"github.com/QuantumNous/new-api/relay/channel/task/apimart"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
 	"github.com/QuantumNous/new-api/relay/helper"
 	"github.com/QuantumNous/new-api/service"
@@ -55,6 +56,14 @@ func init() {
 			Object:  "model",
 			Created: 1626777600,
 			OwnedBy: aicost.ChannelName,
+		})
+	}
+	for _, modelName := range apimart.ModelList {
+		openAIModels = append(openAIModels, dto.OpenAIModels{
+			Id:      modelName,
+			Object:  "model",
+			Created: 1626777600,
+			OwnedBy: apimart.ChannelName,
 		})
 	}
 	for _, modelName := range ai360.ModelList {
@@ -102,7 +111,12 @@ func init() {
 		openAIModelsMap[aiModel.Id] = aiModel
 	}
 	channelId2Models = make(map[int][]string)
+	channelId2Models[constant.ChannelTypeAicost] = aicost.ModelList
+	channelId2Models[constant.ChannelTypeAPIMart] = apimart.ModelList
 	for i := 1; i <= constant.ChannelTypeDummy; i++ {
+		if _, exists := channelId2Models[i]; exists {
+			continue
+		}
 		apiType, success := common.ChannelType2APIType(i)
 		if !success || apiType == constant.APITypeAIProxyLibrary {
 			continue

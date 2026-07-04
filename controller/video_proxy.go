@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/logger"
 	"github.com/QuantumNous/new-api/model"
+	"github.com/QuantumNous/new-api/relay"
 	"github.com/QuantumNous/new-api/service"
 	"github.com/QuantumNous/new-api/setting/system_setting"
 
@@ -49,18 +51,19 @@ func VideoProxy(c *gin.Context) {
 		return
 	}
 
-	if task.Status != model.TaskStatusSuccess {
-		videoProxyError(c, http.StatusBadRequest, "invalid_request_error",
-			fmt.Sprintf("Task is not completed yet, current status: %s", task.Status))
-		return
-	}
-
 	channel, err := model.CacheGetChannel(task.ChannelId)
 	if err != nil {
 		logger.LogError(c.Request.Context(), fmt.Sprintf("Failed to get channel for task %s: %s", taskID, err.Error()))
 		videoProxyError(c, http.StatusInternalServerError, "server_error", "Failed to retrieve channel information")
 		return
 	}
+	refreshVideoProxyTaskStatus(c.Request.Context(), task, channel)
+	if task.Status != model.TaskStatusSuccess {
+		videoProxyError(c, http.StatusBadRequest, "invalid_request_error",
+			fmt.Sprintf("Task is not completed yet, current status: %s", task.Status))
+		return
+	}
+
 	baseURL := channel.GetBaseURL()
 	if baseURL == "" {
 		baseURL = "https://api.openai.com"
@@ -176,6 +179,70 @@ func VideoProxy(c *gin.Context) {
 
 func isCorsResponseHeader(key string) bool {
 	return strings.HasPrefix(strings.ToLower(key), "access-control-")
+}
+
+func refreshVideoProxyTaskStatus(ctx context.Context, task *model.Task, channel *model.Channel) {
+	if task == nil || channel == nil || task.Status == model.TaskStatusSuccess {
+		return
+	}
+	if channel.Type != constant.ChannelTypeAPIMart {
+		return
+	}
+	adaptor := relay.GetTaskAdaptor(constant.TaskPlatform(strconv.Itoa(channel.Type)))
+	if adaptor == nil {
+		return
+	}
+	baseURL := constant.ChannelBaseURLs[channel.Type]
+	if channel.GetBaseURL() != "" {
+		baseURL = channel.GetBaseURL()
+	}
+	key := channel.Key
+	if task.PrivateData.Key != "" {
+		key = task.PrivateData.Key
+	}
+	resp, err := adaptor.FetchTask(baseURL, key, map[string]any{
+		"task_id": task.GetUpstreamTaskID(),
+		"action":  task.Action,
+	}, channel.GetSetting().Proxy)
+	if err != nil || resp == nil {
+		return
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return
+	}
+	taskInfo, err := adaptor.ParseTaskResult(body)
+	if err != nil || taskInfo == nil || taskInfo.Status == "" {
+		return
+	}
+
+	snap := task.Snapshot()
+	task.Status = model.TaskStatus(taskInfo.Status)
+	if taskInfo.Progress != "" {
+		task.Progress = taskInfo.Progress
+	}
+	if taskInfo.StartTime > 0 {
+		task.StartTime = taskInfo.StartTime
+	}
+	if taskInfo.FinishTime > 0 {
+		task.FinishTime = taskInfo.FinishTime
+	}
+	if task.Status == model.TaskStatusSuccess {
+		task.Progress = "100%"
+		if task.FinishTime == 0 {
+			task.FinishTime = time.Now().Unix()
+		}
+		if strings.TrimSpace(taskInfo.Url) != "" {
+			task.PrivateData.ResultURL = taskInfo.Url
+		}
+	}
+	task.Data = body
+	if !snap.Equal(task.Snapshot()) {
+		if _, err := task.UpdateWithStatus(snap.Status); err != nil {
+			logger.LogWarn(ctx, fmt.Sprintf("Failed to refresh APIMart video task %s: %s", task.TaskID, err.Error()))
+		}
+	}
 }
 
 func writeVideoDataURL(c *gin.Context, dataURL string) error {

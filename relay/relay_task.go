@@ -415,15 +415,24 @@ func videoFetchByIDRespBodyBuilder(c *gin.Context) (respBody []byte, taskResp *d
 	return
 }
 
-// tryRealtimeFetch 尝试从上游实时拉取 Gemini/Vertex 任务状态。
-// 仅当渠道类型为 Gemini 或 Vertex 时触发；其他渠道或出错时返回 nil。
+func supportsRealtimeTaskFetch(channelType int) bool {
+	switch channelType {
+	case constant.ChannelTypeVertexAi, constant.ChannelTypeGemini, constant.ChannelTypeAPIMart:
+		return true
+	default:
+		return false
+	}
+}
+
+// tryRealtimeFetch 尝试从上游实时拉取部分视频任务状态。
+// 仅当渠道类型支持实时刷新时触发；其他渠道或出错时返回 nil。
 // 当非 OpenAI Video API 时，还会构建自定义格式的响应体。
 func tryRealtimeFetch(task *model.Task, isOpenAIVideoAPI bool) []byte {
 	channelModel, err := model.GetChannelById(task.ChannelId, true)
 	if err != nil {
 		return nil
 	}
-	if channelModel.Type != constant.ChannelTypeVertexAi && channelModel.Type != constant.ChannelTypeGemini {
+	if !supportsRealtimeTaskFetch(channelModel.Type) {
 		return nil
 	}
 
@@ -463,6 +472,12 @@ func tryRealtimeFetch(task *model.Task, isOpenAIVideoAPI bool) []byte {
 	}
 	if ti.Progress != "" {
 		task.Progress = ti.Progress
+	}
+	if ti.StartTime > 0 {
+		task.StartTime = ti.StartTime
+	}
+	if ti.FinishTime > 0 {
+		task.FinishTime = ti.FinishTime
 	}
 	if strings.HasPrefix(ti.Url, "data:") {
 		// data: URI — kept in Data, not ResultURL
