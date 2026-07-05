@@ -320,13 +320,17 @@ func (a *TaskAdaptor) ConvertToOpenAIVideo(originTask *model.Task) ([]byte, erro
 	video.CompletedAt = originTask.UpdatedAt
 	video.Model = originTask.Properties.OriginModelName
 	video.Seconds = "6"
+	resultURL := originTask.GetResultURL()
 	if response.Data != nil {
 		if url := extractVideoURL(response.Data.Result); url != "" {
-			video.SetMetadata("url", url)
+			resultURL = url
 		}
 		if response.Data.Error != nil {
 			video.Error = &dto.OpenAIVideoError{Code: fmt.Sprint(response.Data.Error.Code), Message: response.Data.Error.Message}
 		}
+	}
+	if resultURL != "" {
+		video.SetMetadata("url", resultURL)
 	}
 	return common.Marshal(video)
 }

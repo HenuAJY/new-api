@@ -133,6 +133,30 @@ func TestAPIMartParseTaskResultSupportsRealCompletedResponse(t *testing.T) {
 	assert.Equal(t, int64(1783170633), taskInfo.FinishTime)
 }
 
+func TestAPIMartConvertToOpenAIVideoUsesStoredResultURL(t *testing.T) {
+	adaptor := &TaskAdaptor{}
+	originTask := &model.Task{
+		TaskID:    "task_public",
+		Status:    model.TaskStatusSuccess,
+		Progress:  "100%",
+		CreatedAt: 100,
+		UpdatedAt: 200,
+		Data:      []byte(`{"code":200,"data":{"id":"upstream_task","status":"completed","progress":100}}`),
+		PrivateData: model.TaskPrivateData{
+			ResultURL: "https://getapib.org/video/result.mp4",
+		},
+	}
+	originTask.Properties.OriginModelName = DownstreamModel
+
+	videoBytes, err := adaptor.ConvertToOpenAIVideo(originTask)
+
+	require.NoError(t, err)
+	var video dto.OpenAIVideo
+	require.NoError(t, common.Unmarshal(videoBytes, &video))
+	assert.Equal(t, dto.VideoStatusCompleted, video.Status)
+	assert.Equal(t, "https://getapib.org/video/result.mp4", video.Metadata["url"])
+}
+
 func TestAPIMartBuildRequestURLAndHeaders(t *testing.T) {
 	adaptor := &TaskAdaptor{}
 	adaptor.Init(&relaycommon.RelayInfo{
