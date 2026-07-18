@@ -192,7 +192,7 @@ func refreshVideoProxyTaskStatus(ctx context.Context, task *model.Task, channel 
 	if adaptor == nil {
 		return
 	}
-	baseURL := constant.ChannelBaseURLs[channel.Type]
+	baseURL := constant.GetChannelBaseURL(channel.Type)
 	if channel.GetBaseURL() != "" {
 		baseURL = channel.GetBaseURL()
 	}

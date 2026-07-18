@@ -104,6 +104,7 @@ export function getChannelTypeIcon(type: number): string {
     56: 'Replicate', // Replicate
     59: 'OpenAI', // Aicost
     60: 'OpenAI', // APIMart
+    9801: 'OpenAI', // MoyinAI
 
     // Tools & Platforms
     37: 'Dify', // Dify
@@ -769,4 +770,3 @@ export function deduplicateKeys(keysText: string): {
 export function getKeyPromptForType(type: number): string {
   return TYPE_TO_KEY_PROMPT[type] || 'Enter API key for this channel'
 }
-

@@ -63,6 +63,7 @@ const BRAND_AND_LITERAL_KEYS = new Set([
   'MiniMax',
   'Mistral',
   'MokaAI',
+  'MoyinAI',
   'Moonshot',
   'New API',
   'New API &lt;noreply@example.com&gt;',

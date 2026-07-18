@@ -58,8 +58,12 @@ const (
 	ChannelTypeAdvancedCustom = 58
 	ChannelTypeAicost         = 59
 	ChannelTypeAPIMart        = 60
-	ChannelTypeDummy          // this one is only for count, do not add any channel after this
+	ChannelTypeDummy          = ChannelTypeAPIMart // upper bound for contiguous upstream channel IDs
+)
 
+const (
+	// Project-specific providers use 9801-9899 to avoid collisions with upstream.
+	ChannelTypeMoyinAI = 9801
 )
 
 var ChannelBaseURLs = []string{
@@ -126,6 +130,13 @@ var ChannelBaseURLs = []string{
 	"https://api.apib.ai",                       //60
 }
 
+func GetChannelBaseURL(channelType int) string {
+	if channelType < 0 || channelType >= len(ChannelBaseURLs) {
+		return ""
+	}
+	return ChannelBaseURLs[channelType]
+}
+
 var ChannelTypeNames = map[int]string{
 	ChannelTypeUnknown:        "Unknown",
 	ChannelTypeOpenAI:         "OpenAI",
@@ -184,6 +195,7 @@ var ChannelTypeNames = map[int]string{
 	ChannelTypeAdvancedCustom: "Advanced Custom",
 	ChannelTypeAicost:         "Aicost",
 	ChannelTypeAPIMart:        "APIMart",
+	ChannelTypeMoyinAI:        "MoyinAI",
 }
 
 func GetChannelTypeName(channelType int) string {
