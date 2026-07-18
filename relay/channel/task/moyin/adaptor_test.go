@@ -10,6 +10,7 @@ import (
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/dto"
 	"github.com/QuantumNous/new-api/model"
+	"github.com/QuantumNous/new-api/relay/channel/task/taskcommon"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -101,6 +102,17 @@ func TestMoyinParseCompletedTaskRequiresAndReturnsVideoURL(t *testing.T) {
 	result, err = adaptor.ParseTaskResult([]byte(`{"id":"upstream-task","status":"completed","progress":100}`))
 	require.NoError(t, err)
 	assert.Equal(t, model.TaskStatusInProgress, result.Status)
+	assert.Equal(t, taskcommon.ProgressInProgress, result.Progress)
+	assert.Empty(t, result.Url)
+}
+
+func TestMoyinParseProcessingTaskNeverReturnsCompleteProgress(t *testing.T) {
+	adaptor := &TaskAdaptor{}
+	result, err := adaptor.ParseTaskResult([]byte(`{
+		"id":"upstream-task","status":"processing","progress":100}`))
+	require.NoError(t, err)
+	assert.Equal(t, model.TaskStatusInProgress, result.Status)
+	assert.Equal(t, "99%", result.Progress)
 	assert.Empty(t, result.Url)
 }
 

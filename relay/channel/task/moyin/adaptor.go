@@ -235,6 +235,9 @@ func (a *TaskAdaptor) ParseTaskResult(body []byte) (*relaycommon.TaskInfo, error
 	default:
 		return nil, fmt.Errorf("unknown task status: %s", response.Status)
 	}
+	if result.Status != model.TaskStatusSuccess && result.Status != model.TaskStatusFailure && result.Progress == taskcommon.ProgressComplete {
+		result.Progress = "99%"
+	}
 	return result, nil
 }
 
