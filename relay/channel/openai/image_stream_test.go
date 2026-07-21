@@ -1,6 +1,7 @@
 package openai
 
 import (
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -8,8 +9,10 @@ import (
 	"testing"
 
 	"github.com/QuantumNous/new-api/constant"
+	"github.com/QuantumNous/new-api/dto"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
 	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -132,6 +135,43 @@ func TestOpenaiImageHandlersReturnJSONError(t *testing.T) {
 		require.Equal(t, "content moderation failed", err.ToOpenAIError().Message)
 		require.Empty(t, recorder.Body.String())
 	})
+}
+
+func TestOpenaiImageHandlerFiltersBase64WhenURLRequested(t *testing.T) {
+	body := `{"created":1710000000,"data":[{"url":"https://example.com/image.png","b64_json":"base64-data","revised_prompt":"draw a cat"},{"b64_json":"base64-only"}],"usage":{"total_tokens":7}}`
+
+	for _, endpoint := range []string{"/v1/images/generations", "/v1/images/edits"} {
+		t.Run(endpoint, func(t *testing.T) {
+			c, recorder, resp, info := newImageTestContext(t, body, "application/json", false)
+			c.Request = httptest.NewRequest(http.MethodPost, endpoint, nil)
+			info.Request = &dto.ImageRequest{ResponseFormat: "url"}
+
+			usage, err := OpenaiImageHandler(c, info, resp)
+			require.Nil(t, err)
+			require.NotNil(t, usage)
+
+			var response struct {
+				Data []map[string]json.RawMessage `json:"data"`
+			}
+			require.NoError(t, json.Unmarshal(recorder.Body.Bytes(), &response))
+			require.Len(t, response.Data, 2)
+			assert.Contains(t, response.Data[0], "url")
+			assert.NotContains(t, response.Data[0], "b64_json")
+			assert.Contains(t, response.Data[0], "revised_prompt")
+			assert.Contains(t, response.Data[1], "b64_json")
+		})
+	}
+}
+
+func TestOpenaiImageHandlerPreservesBase64WithoutURLResponseFormat(t *testing.T) {
+	body := `{"data":[{"url":"https://example.com/image.png","b64_json":"base64-data"}]}`
+	c, recorder, resp, info := newImageTestContext(t, body, "application/json", false)
+	info.Request = &dto.ImageRequest{ResponseFormat: "b64_json"}
+
+	usage, err := OpenaiImageHandler(c, info, resp)
+	require.Nil(t, err)
+	require.NotNil(t, usage)
+	assert.JSONEq(t, body, recorder.Body.String())
 }
 
 // TestOpenaiImageStreamHandlerRecordsUpstreamErrorEvent verifies that an error

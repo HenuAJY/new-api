@@ -39,6 +39,8 @@ func OpenaiImageHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.
 		return nil, types.WithOpenAIError(*oaiError, resp.StatusCode)
 	}
 
+	responseBody = filterImageBase64ForURLResponse(responseBody, info)
+
 	// 写入新的 response body
 	service.IOCopyBytesGracefully(c, resp, responseBody)
 
@@ -100,7 +102,7 @@ func OpenaiImageStreamHandler(c *gin.Context, info *relaycommon.RelayInfo, resp 
 	var lastStreamData []byte
 
 	helper.StreamScannerHandler(c, resp, info, func(data string, sr *helper.StreamResult) {
-		raw := common.StringToByteSlice(data)
+		raw := filterImageBase64ForURLResponse(common.StringToByteSlice(data), info)
 		lastStreamData = raw
 		if isOpenAIImageStreamErrorEvent(raw) {
 			// Record the error as a soft error; the scanner drives the final
@@ -200,6 +202,8 @@ func OpenaiImageJSONAsStreamHandler(c *gin.Context, info *relaycommon.RelayInfo,
 		return nil, types.NewOpenAIError(err, types.ErrorCodeReadResponseBodyFailed, http.StatusInternalServerError)
 	}
 
+	responseBody = filterImageBase64ForURLResponse(responseBody, info)
+
 	var imageResp dto.ImageResponse
 	if err := common.Unmarshal(responseBody, &imageResp); err != nil {
 		return nil, types.NewOpenAIError(err, types.ErrorCodeBadResponseBody, http.StatusInternalServerError)
@@ -261,6 +265,70 @@ func OpenaiImageJSONAsStreamHandler(c *gin.Context, info *relaycommon.RelayInfo,
 		info.StreamStatus.SetEndReason(relaycommon.StreamEndReasonDone, nil)
 	}
 	return &usageResp.Usage, nil
+}
+
+func filterImageBase64ForURLResponse(responseBody []byte, info *relaycommon.RelayInfo) []byte {
+	if info == nil {
+		return responseBody
+	}
+	request, ok := info.Request.(*dto.ImageRequest)
+	if !ok || !strings.EqualFold(request.ResponseFormat, "url") {
+		return responseBody
+	}
+
+	var payload map[string]json.RawMessage
+	if err := common.Unmarshal(responseBody, &payload); err != nil {
+		return responseBody
+	}
+
+	modified := false
+	if rawURL, hasURL := payload["url"]; hasURL {
+		var imageURL string
+		if err := common.Unmarshal(rawURL, &imageURL); err == nil && imageURL != "" {
+			if _, hasBase64 := payload["b64_json"]; hasBase64 {
+				delete(payload, "b64_json")
+				modified = true
+			}
+		}
+	}
+
+	if rawData, hasData := payload["data"]; hasData {
+		var images []map[string]json.RawMessage
+		if err := common.Unmarshal(rawData, &images); err == nil {
+			dataModified := false
+			for _, image := range images {
+				rawURL, hasURL := image["url"]
+				if !hasURL {
+					continue
+				}
+				var imageURL string
+				if err := common.Unmarshal(rawURL, &imageURL); err != nil || imageURL == "" {
+					continue
+				}
+				if _, hasBase64 := image["b64_json"]; hasBase64 {
+					delete(image, "b64_json")
+					dataModified = true
+				}
+			}
+			if dataModified {
+				filteredData, err := common.Marshal(images)
+				if err != nil {
+					return responseBody
+				}
+				payload["data"] = filteredData
+				modified = true
+			}
+		}
+	}
+
+	if !modified {
+		return responseBody
+	}
+	filteredBody, err := common.Marshal(payload)
+	if err != nil {
+		return responseBody
+	}
+	return filteredBody
 }
 
 func writeOpenaiImageStreamPayload(c *gin.Context, eventName string, payload any) error {
