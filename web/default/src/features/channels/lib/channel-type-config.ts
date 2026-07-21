@@ -144,6 +144,17 @@ export const CHANNEL_TYPE_CONFIGS: Record<number, ChannelTypeConfig> = {
       models: 'Models exposed by this channel',
     },
   },
+  9802: {
+    id: 9802,
+    name: CHANNEL_TYPES[9802],
+    icon: 'openai',
+    defaultBaseUrl: 'https://api.viralee.top',
+    supportedModels: ['viraldance933m'],
+    hints: {
+      baseUrl: 'Default: https://api.viralee.top',
+      models: 'viraldance933m',
+    },
+  },
 }
 
 /**

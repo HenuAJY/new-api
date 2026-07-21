@@ -105,6 +105,7 @@ export function getChannelTypeIcon(type: number): string {
     59: 'OpenAI', // Aicost
     60: 'OpenAI', // APIMart
     9801: 'OpenAI', // MoyinAI
+    9802: 'OpenAI', // viraldance933m
 
     // Tools & Platforms
     37: 'Dify', // Dify

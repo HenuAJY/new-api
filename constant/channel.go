@@ -63,7 +63,8 @@ const (
 
 const (
 	// Project-specific providers use 9801-9899 to avoid collisions with upstream.
-	ChannelTypeMoyinAI = 9801
+	ChannelTypeMoyinAI        = 9801
+	ChannelTypeViraldance933m = 9802
 )
 
 var ChannelBaseURLs = []string{
@@ -196,6 +197,7 @@ var ChannelTypeNames = map[int]string{
 	ChannelTypeAicost:         "Aicost",
 	ChannelTypeAPIMart:        "APIMart",
 	ChannelTypeMoyinAI:        "MoyinAI",
+	ChannelTypeViraldance933m: "viraldance933m",
 }
 
 func GetChannelTypeName(channelType int) string {

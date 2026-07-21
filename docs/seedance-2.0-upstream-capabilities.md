@@ -153,7 +153,64 @@ GET {channel_base_url}/v1/videos/{upstream_task_id}
 | `execution_expires_after` | 不返回 | MoyinAI 不提供该字段 |
 | `usage` | 不返回 | MoyinAI 当前文档未定义官方 token 用量结构 |
 
-## 4. 渠道新增维护规范
+## 4. viraldance933m 创建任务字段
+
+viraldance933m 上游接口：
+
+```text
+POST https://api.viralee.top/v1/videos
+```
+
+| 官方字段 | viraldance933m 字段 | 状态 | 处理说明 |
+| --- | --- | --- | --- |
+| `model` | `model` | 转换支持 | 下游模型名由公共渠道路由处理，适配器不校验名称；上游固定发送 `viraldance933m`，不使用渠道模型映射覆盖 |
+| `content[].type=text` | `prompt` | 转换支持 | 官方文本内容由公共协议层合并后发送，最长 2000 字符 |
+| `content[].role=first_frame` | `start_image_url` | 转换支持 | 作为首帧图片 URL 发送 |
+| `content[].role=last_frame` | `end_image_url` | 转换支持 | 作为尾帧图片 URL 发送 |
+| `content[].role=reference_image` | `image_urls[]` | 转换支持 | 未填写角色的图片也按参考图处理，最多 9 张 |
+| `content[].type=video_url` | `video_reference[]` | 转换支持 | 转换为 `{\"url\": \"...\"}` 数组，最多 3 条 |
+| `content[].type=audio_url` | `audio_reference[]` | 条件支持 | 转换为 `{\"url\": \"...\"}` 数组，最多 3 条，且官方协议要求同时提供图片或视频参考 |
+| `content[].type=draft_task` | - | 接收但忽略 | 上游未定义官方 Draft 任务引用 |
+| `resolution` | `resolution` | 条件支持 | `720p` 会发送；其他官方取值被接收但不发送给该上游 |
+| `ratio` | `aspect_ratio` | 条件支持 | `16:9`、`9:16`、`1:1` 会发送；其他官方取值被接收但不发送 |
+| `duration` | `duration` | 转换支持 | 以数值发送，允许 4-15 秒 |
+| `callback_url` | - | 接收但忽略 | NewAPI 不向该上游注册回调 |
+| `return_last_frame` | - | 接收但忽略 | 不要求上游返回尾帧 URL |
+| `service_tier` | - | 接收但忽略 | 不控制上游服务等级 |
+| `execution_expires_after` | - | 接收但忽略 | 不改变上游任务超时策略 |
+| `generate_audio` | - | 接收但忽略 | 不控制上游是否生成同步音频 |
+| `draft` | - | 接收但忽略 | 不启用样片模式 |
+| `tools` | - | 接收但忽略 | 不发送官方工具配置 |
+| `safety_identifier` | - | 接收但忽略 | 不发送给上游 |
+| `priority` | - | 接收但忽略 | 不改变上游队列优先级 |
+| `frames` | - | 接收但忽略 | 不按帧数控制时长 |
+| `seed` | - | 接收但忽略 | 不控制随机种子 |
+| `camera_fixed` | - | 接收但忽略 | 不控制固定镜头能力 |
+| `watermark` | - | 接收但忽略 | 不控制输出水印 |
+
+## 5. viraldance933m 查询任务字段
+
+viraldance933m 上游接口：
+
+```text
+GET https://api.viralee.top/v1/videos/{upstream_task_id}
+```
+
+| 官方查询字段 | 状态 | 数据来源或处理说明 |
+| --- | --- | --- |
+| `id` | 响应支持 | 返回 NewAPI 公开任务 ID，不暴露上游任务 ID |
+| `model` | 响应支持 | 固定返回下游模型名 `viraldance933m` |
+| `status` | 转换支持 | `submitted`/`queued` 映射为 `queued`，`processing`/`in_progress` 映射为 `running` |
+| `error.code` | 条件支持 | 上游提供错误码时返回 |
+| `error.message` | 响应支持 | 固定返回通用失败信息，不透传上游错误文案 |
+| `created_at` | 响应支持 | NewAPI 任务创建时间 |
+| `updated_at` | 响应支持 | NewAPI 任务最后更新时间 |
+| `content.video_url` | 响应支持 | 读取上游 `metadata.url`，保存到任务记录后直接返回，不下载视频 |
+| 其他结果扩展字段 | 不返回 | 上游查询协议未提供可可靠映射的数据 |
+
+上游仅返回 `completed` 但没有 `metadata.url` 时，任务继续轮询。非终态即使上游报告进度 100%，NewAPI 也会保存为 99%，避免公共轮询器提前停止。
+
+## 6. 渠道新增维护规范
 
 每接入一个新的 Seedance 2.0 上游渠道，应在本文档新增两张表：创建任务字段和查询任务字段。
 
@@ -168,8 +225,9 @@ GET {channel_base_url}/v1/videos/{upstream_task_id}
 7. 上游视频 URL 保存到任务记录并直接返回，不在服务器下载视频。
 8. 新增渠道时为字段过滤、模型映射、状态映射和 URL 提取添加确定性测试。
 
-## 5. 当前渠道总览
+## 7. 当前渠道总览
 
 | 渠道 ID | 渠道 | 下游模型名示例 | 上游模型名来源 | 文本 | 图片 | 视频 | 音频 | 尾帧 | 官方扩展字段 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | `9801` | MoyinAI | `S-MOYIN` | 渠道模型映射 | 支持 | 通用参考 | 支持 | 条件支持 | 不支持 | 接收但不转发 |
+| `9802` | viraldance933m | `viraldance933m` | 适配器固定 | 支持 | 参考图/首帧 | 支持 | 条件支持 | 支持尾帧输入 | 接收但按能力转发 |
