@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -146,7 +147,7 @@ func (a *TaskAdaptor) ValidateRequestAndSetAction(c *gin.Context, info *relaycom
 
 	seconds := normalizeSeconds(req.Seconds)
 	if !isSupportedSeconds(seconds) {
-		return service.TaskErrorWrapperLocal(fmt.Errorf("seconds must be 6, 10, or 15"), "invalid_seconds", http.StatusBadRequest)
+		return service.TaskErrorWrapperLocal(fmt.Errorf("seconds must be an integer between 1 and 15"), "invalid_seconds", http.StatusBadRequest)
 	}
 
 	size := normalizeSize(req.Size)
@@ -404,12 +405,8 @@ func normalizeSeconds(seconds string) string {
 }
 
 func isSupportedSeconds(seconds string) bool {
-	switch seconds {
-	case "6", "10", "15":
-		return true
-	default:
-		return false
-	}
+	value, err := strconv.Atoi(seconds)
+	return err == nil && value >= 1 && value <= 15
 }
 
 func normalizeSize(size string) string {

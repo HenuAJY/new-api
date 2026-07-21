@@ -139,6 +139,59 @@ func TestAicostRejectsGrokImagineVideo15WithoutReferenceImage(t *testing.T) {
 	assert.Equal(t, "missing_reference_image", taskErr.Code)
 }
 
+func TestAicostAcceptsSecondsFromOneToFifteen(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	for _, seconds := range []string{"1", "7", "15"} {
+		t.Run(seconds, func(t *testing.T) {
+			request := httptest.NewRequest(http.MethodPost, "/v1/videos", strings.NewReader(`{
+				"model":"grok-imagine-video-1.5-preview",
+				"prompt":"walk forward",
+				"input_reference":{"image_url":"https://cdn.example/scene.png"},
+				"seconds":"`+seconds+`"
+			}`))
+			request.Header.Set("Content-Type", "application/json")
+			context, _ := gin.CreateTestContext(httptest.NewRecorder())
+			context.Request = request
+
+			taskErr := (&TaskAdaptor{}).ValidateRequestAndSetAction(context, &relaycommon.RelayInfo{
+				ChannelMeta:   &relaycommon.ChannelMeta{},
+				TaskRelayInfo: &relaycommon.TaskRelayInfo{},
+			})
+
+			require.Nil(t, taskErr)
+			payload, exists := context.Get("aicost_task_request")
+			require.True(t, exists)
+			assert.Equal(t, seconds, payload.(requestPayload).Seconds)
+		})
+	}
+}
+
+func TestAicostRejectsSecondsOutsideOneToFifteen(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	for _, seconds := range []string{"0", "16", "1.5", "invalid"} {
+		t.Run(seconds, func(t *testing.T) {
+			request := httptest.NewRequest(http.MethodPost, "/v1/videos", strings.NewReader(`{
+				"model":"grok-imagine-video-1.5-preview",
+				"prompt":"walk forward",
+				"input_reference":{"image_url":"https://cdn.example/scene.png"},
+				"seconds":"`+seconds+`"
+			}`))
+			request.Header.Set("Content-Type", "application/json")
+			context, _ := gin.CreateTestContext(httptest.NewRecorder())
+			context.Request = request
+
+			taskErr := (&TaskAdaptor{}).ValidateRequestAndSetAction(context, &relaycommon.RelayInfo{
+				ChannelMeta:   &relaycommon.ChannelMeta{},
+				TaskRelayInfo: &relaycommon.TaskRelayInfo{},
+			})
+
+			require.NotNil(t, taskErr)
+			assert.Equal(t, http.StatusBadRequest, taskErr.StatusCode)
+			assert.Equal(t, "invalid_seconds", taskErr.Code)
+		})
+	}
+}
+
 func TestAicostDoResponseReturnsPublicOpenAIVideoForAsyncTask(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	recorder := httptest.NewRecorder()
