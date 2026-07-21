@@ -59,6 +59,15 @@ func SetRelayRouter(router *gin.Engine) {
 		})
 	}
 
+	uploadRouter := router.Group("/v1/upload")
+	uploadRouter.Use(middleware.RouteTag("relay"))
+	uploadRouter.Use(middleware.SystemPerformanceCheck())
+	uploadRouter.Use(middleware.TokenAuth())
+	uploadRouter.Use(middleware.UploadRateLimit())
+	{
+		uploadRouter.POST("/presign", controller.CreateUploadPresign)
+	}
+
 	playgroundRouter := router.Group("/pg")
 	playgroundRouter.Use(middleware.RouteTag("relay"))
 	playgroundRouter.Use(middleware.SystemPerformanceCheck())

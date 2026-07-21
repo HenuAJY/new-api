@@ -61,6 +61,9 @@
       "name": "Realtime"
     },
     {
+      "name": "文件上传"
+    },
+    {
       "name": "未实现"
     },
     {
@@ -71,6 +74,125 @@
     }
   ],
   "paths": {
+    "/v1/upload/presign": {
+      "post": {
+        "summary": "生成 TOS 临时上传 URL",
+        "deprecated": false,
+        "description": "为当前 API 令牌所属用户生成一个临时 TOS PUT 上传 URL。客户端上传时必须使用响应中的 method 和 headers。对象键由服务端生成，调用方不能指定存储位置。",
+        "operationId": "createUploadPresign",
+        "tags": [
+          "文件上传"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "filename"
+                ],
+                "properties": {
+                  "filename": {
+                    "type": "string",
+                    "description": "原始文件名，仅用于保留安全的文件扩展名"
+                  },
+                  "content_type": {
+                    "type": "string",
+                    "description": "上传文件的媒体类型，默认 application/octet-stream",
+                    "example": "image/png"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "签名成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "url",
+                    "public_url",
+                    "method",
+                    "object_key",
+                    "headers",
+                    "expires_at"
+                  ],
+                  "properties": {
+                    "url": {
+                      "type": "string",
+                      "format": "uri"
+                    },
+                    "public_url": {
+                      "type": "string",
+                      "format": "uri",
+                      "description": "对象的固定公网地址；仅当 Bucket 或对象允许公共读时可直接访问"
+                    },
+                    "method": {
+                      "type": "string",
+                      "example": "PUT"
+                    },
+                    "object_key": {
+                      "type": "string"
+                    },
+                    "headers": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "string"
+                      }
+                    },
+                    "expires_at": {
+                      "type": "integer",
+                      "format": "int64",
+                      "description": "URL 过期时间，Unix 秒"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求参数无效",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API 令牌无效",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "TOS 上传服务未配置",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
     "/v1/models": {
       "get": {
         "summary": "获取模型列表",

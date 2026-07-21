@@ -31,6 +31,13 @@ services:
       - REDIS_CONN_STRING=redis://redis
       - TZ=Asia/Shanghai
       - BATCH_UPDATE_ENABLED=true
+      - TOS_ACCESS_KEY=${TOS_ACCESS_KEY:-}
+      - TOS_SECRET_KEY=${TOS_SECRET_KEY:-}
+      - TOS_ENDPOINT=${TOS_ENDPOINT:-}
+      - TOS_REGION=${TOS_REGION:-}
+      - TOS_BUCKET=${TOS_BUCKET:-}
+      - TOS_UPLOAD_PREFIX=${TOS_UPLOAD_PREFIX:-uploads}
+      - TOS_UPLOAD_PRESIGN_EXPIRES=${TOS_UPLOAD_PRESIGN_EXPIRES:-900}
     depends_on:
       redis:
         condition: service_started
