@@ -66,6 +66,7 @@ const (
 	ChannelTypeMoyinAI        = 9801
 	ChannelTypeViraldance933m = 9802
 	ChannelTypeViraldance933x = 9803
+	ChannelTypeViraldance933v = 9804
 )
 
 var ChannelBaseURLs = []string{
@@ -200,6 +201,7 @@ var ChannelTypeNames = map[int]string{
 	ChannelTypeMoyinAI:        "MoyinAI",
 	ChannelTypeViraldance933m: "viraldance933m",
 	ChannelTypeViraldance933x: "viraldance933x",
+	ChannelTypeViraldance933v: "viraldance933v",
 }
 
 func GetChannelTypeName(channelType int) string {

@@ -279,3 +279,29 @@ GET https://api.viralee.top/v1/videos/{upstream_task_id}
 | `9801` | MoyinAI | `S-MOYIN` | 渠道模型映射 | 支持 | 通用参考 | 支持 | 条件支持 | 不支持 | 接收但不转发 |
 | `9802` | viraldance933m | `viraldance933m` | 适配器固定 | 支持 | 参考图/首帧 | 支持 | 条件支持 | 支持尾帧输入 | 接收但按能力转发 |
 | `9803` | viraldance933x | 渠道模型映射 | `UpstreamModelName` | 支持 | 参考图/首帧 | 支持 | 条件支持 | 支持尾帧输入 | 接收但按能力转发 |
+| `9804` | viraldance933v | 渠道模型映射 | `UpstreamModelName` | 支持 | 参考图/首帧 | 支持 | 条件支持 | 支持尾帧输入 | 接收但按能力转发 |
+
+## 10. viraldance933v 字段说明
+
+viraldance933v 上游接口：
+
+```text
+POST https://api.viralee.top/v1/videos
+GET  https://api.viralee.top/v1/videos/{upstream_task_id}
+```
+
+| 官方字段 | viraldance933v 字段 | 状态 | 处理说明 |
+| --- | --- | --- | --- |
+| `model` | `model` | 转换支持 | 适配器不校验或固定模型名，优先使用渠道 `UpstreamModelName`，否则回退到 `OriginModelName` |
+| `content[].type=text` | `prompt` | 转换支持 | 文本合并后发送，最长 5000 字符 |
+| `content[].role=first_frame` | `start_image_url` | 转换支持 | 首帧图片 |
+| `content[].role=last_frame` | `end_image_url` | 转换支持 | 尾帧图片 |
+| `content[].type=image_url` | `image_urls[]` | 转换支持 | 参考图片最多 9 张 |
+| `content[].type=video_url` | `video_reference[]` | 转换支持 | 参考视频最多 3 条 |
+| `content[].type=audio_url` | `audio_reference[]` | 条件支持 | 参考音频最多 3 条 |
+| `duration` | `duration` | 转换支持 | 上游允许 1-15 秒；未传时使用上游默认 5 秒 |
+| `ratio` / `resolution` | - | 接收但忽略 | 该渠道固定输出 9:16、720p |
+| `enable_face_mask` | - | 接收但忽略 | 该字段不是下游官方 Seedance 协议字段，不从下游转发 |
+| 其他官方扩展字段 | - | 接收但忽略 | 不发送给上游 |
+
+查询成功时优先读取上游顶层 `url`，没有时读取 `metadata.url`。只有成功状态且视频 URL 非空才结束轮询；非终态进度为 100% 时保存为 99%。视频 URL 直接保存到任务记录并返回，不下载视频文件。

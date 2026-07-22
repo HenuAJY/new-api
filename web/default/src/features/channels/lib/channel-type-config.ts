@@ -166,6 +166,12 @@ export const CHANNEL_TYPE_CONFIGS: Record<number, ChannelTypeConfig> = {
       models: 'viraldance933x',
     },
   },
+  9804: {
+    id: 9804,
+    name: CHANNEL_TYPES[9804],
+    icon: 'openai',
+    defaultBaseUrl: 'https://api.viralee.top',
+  },
 }
 
 /**
