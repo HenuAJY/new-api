@@ -9,8 +9,10 @@ import (
 func TestCustomChannelTypeUsesReservedRangeWithoutBaseURLIndexing(t *testing.T) {
 	assert.Equal(t, 9801, ChannelTypeMoyinAI)
 	assert.Equal(t, 9802, ChannelTypeViraldance933m)
+	assert.Equal(t, 9803, ChannelTypeViraldance933x)
 	assert.Empty(t, GetChannelBaseURL(ChannelTypeMoyinAI))
 	assert.Empty(t, GetChannelBaseURL(ChannelTypeViraldance933m))
+	assert.Empty(t, GetChannelBaseURL(ChannelTypeViraldance933x))
 	assert.Equal(t, "https://api.openai.com", GetChannelBaseURL(ChannelTypeOpenAI))
 	assert.Empty(t, GetChannelBaseURL(-1))
 }

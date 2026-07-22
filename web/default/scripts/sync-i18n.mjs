@@ -65,6 +65,7 @@ const BRAND_AND_LITERAL_KEYS = new Set([
   'MokaAI',
   'MoyinAI',
   'viraldance933m',
+  'viraldance933x',
   'Moonshot',
   'New API',
   'New API &lt;noreply@example.com&gt;',
