@@ -113,35 +113,50 @@ func DownloadRateLimit() func(c *gin.Context) {
 }
 
 func UploadRateLimit() func(c *gin.Context) {
-	return rateLimitFactory(common.UploadRateLimitNum, common.UploadRateLimitDuration, "UP")
+	if !common.UploadRateLimitEnable {
+		return defNext
+	}
+	return tokenRateLimitFactory(common.UploadRateLimitNum, common.UploadRateLimitDuration, "UP")
 }
 
-// userRateLimitFactory creates a rate limiter keyed by authenticated user ID
-// instead of client IP, making it resistant to proxy rotation attacks.
-// Must be used AFTER authentication middleware (UserAuth).
+// userRateLimitFactory creates a rate limiter keyed by authenticated user ID.
 func userRateLimitFactory(maxRequestNum int, duration int64, mark string) func(c *gin.Context) {
+	return rateLimitByIDFactory(maxRequestNum, duration, mark, "user", func(c *gin.Context) int {
+		return c.GetInt("id")
+	})
+}
+
+// tokenRateLimitFactory creates a rate limiter keyed by API token ID.
+// It must run after TokenAuth, which sets token_id in the request context.
+func tokenRateLimitFactory(maxRequestNum int, duration int64, mark string) func(c *gin.Context) {
+	return rateLimitByIDFactory(maxRequestNum, duration, mark, "token", func(c *gin.Context) int {
+		return c.GetInt("token_id")
+	})
+}
+
+func rateLimitByIDFactory(maxRequestNum int, duration int64, mark, scope string, getID func(*gin.Context) int) func(c *gin.Context) {
 	if common.RedisEnabled {
 		return func(c *gin.Context) {
-			userId := c.GetInt("id")
-			if userId == 0 {
+			id := getID(c)
+			if id == 0 {
 				c.Status(http.StatusUnauthorized)
 				c.Abort()
 				return
 			}
-			key := fmt.Sprintf("rateLimit:%s:user:%d", mark, userId)
+			key := fmt.Sprintf("rateLimit:%s:%s:%d", mark, scope, id)
 			userRedisRateLimiter(c, maxRequestNum, duration, key)
 		}
 	}
 	// It's safe to call multi times.
 	inMemoryRateLimiter.Init(common.RateLimitKeyExpirationDuration)
 	return func(c *gin.Context) {
-		userId := c.GetInt("id")
-		if userId == 0 {
+		id := getID(c)
+		if id == 0 {
 			c.Status(http.StatusUnauthorized)
 			c.Abort()
 			return
 		}
-		key := fmt.Sprintf("%s:user:%d", mark, userId)
+		key := fmt.Sprintf("%s:%s:%d", mark, scope, id)
 		if !inMemoryRateLimiter.Request(key, maxRequestNum, duration) {
 			c.Status(http.StatusTooManyRequests)
 			c.Abort()
