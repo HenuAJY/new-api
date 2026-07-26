@@ -36,6 +36,7 @@ import (
 	taskapimart "github.com/QuantumNous/new-api/relay/channel/task/apimart"
 	taskdoubao "github.com/QuantumNous/new-api/relay/channel/task/doubao"
 	taskGemini "github.com/QuantumNous/new-api/relay/channel/task/gemini"
+	taskgravitexsd "github.com/QuantumNous/new-api/relay/channel/task/gravitexsd"
 	"github.com/QuantumNous/new-api/relay/channel/task/hailuo"
 	taskjimeng "github.com/QuantumNous/new-api/relay/channel/task/jimeng"
 	"github.com/QuantumNous/new-api/relay/channel/task/kling"
@@ -181,6 +182,8 @@ func GetTaskAdaptor(platform constant.TaskPlatform) channel.TaskAdaptor {
 			return &taskviraldance933v.TaskAdaptor{}
 		case constant.ChannelTypeViraldance431Fast:
 			return &taskviraldance431fast.TaskAdaptor{}
+		case constant.ChannelTypeGravitexSD:
+			return &taskgravitexsd.TaskAdaptor{}
 		case constant.ChannelTypeMiniMax:
 			return &hailuo.TaskAdaptor{}
 		}

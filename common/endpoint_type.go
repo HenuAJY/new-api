@@ -34,7 +34,7 @@ func GetEndpointTypesByChannelType(channelType int, modelName string) []constant
 		endpointTypes = []constant.EndpointType{constant.EndpointTypeOpenAIVideo}
 	case constant.ChannelTypeAPIMart:
 		endpointTypes = []constant.EndpointType{constant.EndpointTypeOpenAIVideo}
-	case constant.ChannelTypeMoyinAI, constant.ChannelTypeViraldance933m, constant.ChannelTypeViraldance933x, constant.ChannelTypeViraldance933v, constant.ChannelTypeViraldance431Fast:
+	case constant.ChannelTypeMoyinAI, constant.ChannelTypeViraldance933m, constant.ChannelTypeViraldance933x, constant.ChannelTypeViraldance933v, constant.ChannelTypeViraldance431Fast, constant.ChannelTypeGravitexSD:
 		endpointTypes = []constant.EndpointType{constant.EndpointTypeOpenAIVideo}
 	default:
 		if IsOpenAIResponseOnlyModel(modelName) {

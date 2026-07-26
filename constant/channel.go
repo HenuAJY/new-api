@@ -68,6 +68,7 @@ const (
 	ChannelTypeViraldance933x = 9803
 	ChannelTypeViraldance933v = 9804
 	ChannelTypeViraldance431Fast = 9805
+	ChannelTypeGravitexSD        = 9806
 )
 
 var ChannelBaseURLs = []string{
@@ -204,6 +205,7 @@ var ChannelTypeNames = map[int]string{
 	ChannelTypeViraldance933x: "viraldance933x",
 	ChannelTypeViraldance933v: "viraldance933v",
 	ChannelTypeViraldance431Fast: "viraldance431-fast",
+	ChannelTypeGravitexSD: "gravitex-sd",
 }
 
 func GetChannelTypeName(channelType int) string {

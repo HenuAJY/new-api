@@ -109,6 +109,7 @@ export function getChannelTypeIcon(type: number): string {
     9803: 'OpenAI', // viraldance933x
     9804: 'OpenAI', // viraldance933v
     9805: 'OpenAI', // viraldance431-fast
+    9806: 'OpenAI', // gravitex-sd
 
     // Tools & Platforms
     37: 'Dify', // Dify

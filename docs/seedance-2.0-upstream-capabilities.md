@@ -281,6 +281,7 @@ GET https://api.viralee.top/v1/videos/{upstream_task_id}
 | `9803` | viraldance933x | 渠道模型映射 | `UpstreamModelName` | 支持 | 参考图/首帧 | 支持 | 条件支持 | 支持尾帧输入 | 接收但按能力转发 |
 | `9804` | viraldance933v | 渠道模型映射 | `UpstreamModelName` | 支持 | 参考图/首帧 | 支持 | 条件支持 | 支持尾帧输入 | 接收但按能力转发 |
 | `9805` | viraldance431-fast | 渠道模型映射 | `UpstreamModelName` | 支持 | 参考图/首帧 | 支持 | 条件支持 | 支持尾帧输入 | 接收但按能力转发 |
+| `9806` | gravitex-sd | 渠道模型映射 | `UpstreamModelName` | 支持 | 参考图/首帧 | 支持 | 条件支持 | 支持尾帧输入 | 接收但按能力转发 |
 
 ## 10. viraldance933v 字段说明
 
@@ -333,3 +334,44 @@ GET  https://api.viralee.top/v1/videos/{upstream_task_id}
 | 其他官方扩展字段 | - | 接收但忽略 | 不发送给上游 |
 
 查询完成时优先读取上游顶层 `url`，并兼容读取 `video_url` 和 `metadata.url`。只有成功状态且视频 URL 非空才停止轮询；非终态进度为 100% 时保存为 99%。视频 URL 直接保存到任务记录并返回，不下载视频文件。
+
+## 12. gravitex-sd 字段说明
+
+gravitex-sd 上游接口：
+
+```text
+POST https://api.gravitex.ai/v1/video/generations
+GET  https://api.gravitex.ai/v1/video/generations/{upstream_task_id}
+```
+
+供应商文档没有声明计费单位，因此适配器不增加时长倍率，使用 NewAPI 的模型价格进行默认按次计费。
+
+| 官方字段 | gravitex-sd 字段 | 状态 | 处理说明 |
+| --- | --- | --- | --- |
+| `model` | `model` | 转换支持 | 不校验或固定模型名；优先使用渠道 `UpstreamModelName`，否则回退到 `OriginModelName`。上游文档列出 `seedance-2-0` 和 `seedance-2-0-fast` |
+| `content[].type=text` | `content[].type=text` | 直接支持 | 最多 1 条，最长 5000 字符；没有 `content` 时可使用 `prompt` |
+| `content[].role=first_frame` | 同名字段 | 直接支持 | 最多 1 张；未指定角色的单图也由上游作为首帧处理 |
+| `content[].role=last_frame` | 同名字段 | 直接支持 | 最多 1 张且必须搭配首帧 |
+| `content[].role=reference_image` | 同名字段 | 直接支持 | 最多 9 张，与首帧模式互斥 |
+| `content[].type=video_url` | 同名字段 | 直接支持 | 参考视频最多 3 条 |
+| `content[].type=audio_url` | 同名字段 | 条件支持 | 参考音频最多 3 条，必须搭配图片或视频 |
+| `duration` | `duration` | 直接支持 | 允许 `-1` 自动时长或 4-15 秒 |
+| `resolution` | `resolution` | 直接支持 | 支持 `480p`、`720p`、`1080p`；fast 模型的 1080p 限制交由上游按实际模型判断 |
+| `ratio` | `ratio` | 直接支持 | 支持 `16:9`、`9:16`、`1:1`、`4:3`、`3:4`、`21:9`、`adaptive` |
+| `generate_audio` | `generate_audio` | 直接支持 | 显式 `false` 会保留并发送 |
+| `watermark` | `watermark` | 直接支持 | 显式 `false` 会保留并发送 |
+| `seed` | `seed` | 直接支持 | 显式 `0` 或 `-1` 会保留并发送 |
+| `draft_task` 及其他扩展字段 | - | 接收但忽略 | 不发送给上游 |
+
+查询完成时优先读取上游 `video_url`，并兼容读取顶层 `url`、`metadata.video_url` 和 `metadata.url`。只有成功状态且视频 URL 非空才停止轮询；非终态进度为 100% 时保存为 99%。视频 URL 直接保存到任务记录并返回，不下载视频文件。上游错误状态码可以返回，但错误消息统一替换为公共安全文案。
+
+### 12.1 Gravitex 素材库内部托管
+
+下游不需要调用 Gravitex 素材库接口，也不能传 Base64、Data URI、本地路径或 `asset://` 地址。下游在官方 `content` 中传入可被公网访问的 `http://` 或 `https://` 图片、视频、音频 URL 后，适配器会在提交视频任务前：
+
+1. 按渠道 API Key 和上游地址查找或创建一个托管的 `aigc` 素材组；
+2. 调用 `POST /v1/assets` 上传 URL，并按内容类型传递 `Image`、`Video` 或 `Audio`；
+3. 轮询素材状态直到 `active`，将内容 URL 替换为上游返回的 `asset://...` 地址；
+4. 使用内存缓存复用已创建的素材组和已激活素材，视频生成请求本身仍只发送上游需要的字段。
+
+素材上传或处理失败时，任务不会提交到视频生成接口，向下游返回统一的素材准备失败信息；NewAPI 不下载或保存素材和视频文件本体。
