@@ -280,6 +280,7 @@ GET https://api.viralee.top/v1/videos/{upstream_task_id}
 | `9802` | viraldance933m | `viraldance933m` | 适配器固定 | 支持 | 参考图/首帧 | 支持 | 条件支持 | 支持尾帧输入 | 接收但按能力转发 |
 | `9803` | viraldance933x | 渠道模型映射 | `UpstreamModelName` | 支持 | 参考图/首帧 | 支持 | 条件支持 | 支持尾帧输入 | 接收但按能力转发 |
 | `9804` | viraldance933v | 渠道模型映射 | `UpstreamModelName` | 支持 | 参考图/首帧 | 支持 | 条件支持 | 支持尾帧输入 | 接收但按能力转发 |
+| `9805` | viraldance431-fast | 渠道模型映射 | `UpstreamModelName` | 支持 | 参考图/首帧 | 支持 | 条件支持 | 支持尾帧输入 | 接收但按能力转发 |
 
 ## 10. viraldance933v 字段说明
 
@@ -305,3 +306,30 @@ GET  https://api.viralee.top/v1/videos/{upstream_task_id}
 | 其他官方扩展字段 | - | 接收但忽略 | 不发送给上游 |
 
 查询成功时优先读取上游顶层 `url`，没有时读取 `metadata.url`。只有成功状态且视频 URL 非空才结束轮询；非终态进度为 100% 时保存为 99%。视频 URL 直接保存到任务记录并返回，不下载视频文件。
+
+## 11. viraldance431-fast 字段说明
+
+viraldance431-fast 上游接口：
+
+```text
+POST https://api.viralee.top/v1/videos
+GET  https://api.viralee.top/v1/videos/{upstream_task_id}
+```
+
+该渠道按次计费，生成失败由现有任务结算流程处理退款。
+
+| 官方字段 | viraldance431-fast 字段 | 状态 | 处理说明 |
+| --- | --- | --- | --- |
+| `model` | `model` | 转换支持 | 适配器不校验或固定模型名，优先使用渠道 `UpstreamModelName`，否则回退到 `OriginModelName` |
+| `content[].type=text` | `prompt` | 转换支持 | 文本合并后发送，最长 5000 字符 |
+| `content[].role=first_frame` | `start_image_url` | 转换支持 | 首帧图片 |
+| `content[].role=last_frame` | `end_image_url` | 转换支持 | 尾帧图片 |
+| `content[].type=image_url` | `image_urls[]` | 转换支持 | 普通参考图片最多 4 张 |
+| `content[].type=video_url` | `video_reference[]` | 转换支持 | 参考视频最多 3 条 |
+| `content[].type=audio_url` | `audio_reference[]` | 条件支持 | 参考音频最多 1 条；官方入口仍要求音频搭配图片或视频素材 |
+| `duration` | `duration` | 转换支持 | 上游允许 4-15 秒；未传时由上游使用默认 5 秒 |
+| `ratio` | `aspect_ratio` | 转换支持 | 支持 `16:9`、`9:16`、`1:1` |
+| `resolution` | `resolution` | 转换支持 | 仅向上游发送 `720p` |
+| 其他官方扩展字段 | - | 接收但忽略 | 不发送给上游 |
+
+查询完成时优先读取上游顶层 `url`，并兼容读取 `video_url` 和 `metadata.url`。只有成功状态且视频 URL 非空才停止轮询；非终态进度为 100% 时保存为 99%。视频 URL 直接保存到任务记录并返回，不下载视频文件。

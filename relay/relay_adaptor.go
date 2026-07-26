@@ -44,6 +44,7 @@ import (
 	"github.com/QuantumNous/new-api/relay/channel/task/suno"
 	taskvertex "github.com/QuantumNous/new-api/relay/channel/task/vertex"
 	taskVidu "github.com/QuantumNous/new-api/relay/channel/task/vidu"
+	taskviraldance431fast "github.com/QuantumNous/new-api/relay/channel/task/viraldance431fast"
 	taskviraldance933m "github.com/QuantumNous/new-api/relay/channel/task/viraldance933m"
 	taskviraldance933v "github.com/QuantumNous/new-api/relay/channel/task/viraldance933v"
 	taskviraldance933x "github.com/QuantumNous/new-api/relay/channel/task/viraldance933x"
@@ -178,6 +179,8 @@ func GetTaskAdaptor(platform constant.TaskPlatform) channel.TaskAdaptor {
 			return &taskviraldance933x.TaskAdaptor{}
 		case constant.ChannelTypeViraldance933v:
 			return &taskviraldance933v.TaskAdaptor{}
+		case constant.ChannelTypeViraldance431Fast:
+			return &taskviraldance431fast.TaskAdaptor{}
 		case constant.ChannelTypeMiniMax:
 			return &hailuo.TaskAdaptor{}
 		}

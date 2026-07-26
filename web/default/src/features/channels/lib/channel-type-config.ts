@@ -172,6 +172,12 @@ export const CHANNEL_TYPE_CONFIGS: Record<number, ChannelTypeConfig> = {
     icon: 'openai',
     defaultBaseUrl: 'https://api.viralee.top',
   },
+  9805: {
+    id: 9805,
+    name: CHANNEL_TYPES[9805],
+    icon: 'openai',
+    defaultBaseUrl: 'https://api.viralee.top',
+  },
 }
 
 /**
