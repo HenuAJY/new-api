@@ -344,7 +344,7 @@ POST https://api.gravitex.ai/v1/video/generations
 GET  https://api.gravitex.ai/v1/video/generations/{upstream_task_id}
 ```
 
-供应商文档没有声明计费单位，因此适配器不增加时长倍率，使用 NewAPI 的模型价格进行默认按次计费。
+该渠道按秒计费。模型价格应配置为每秒单价，任务费用按 `duration` 的秒数计算；未传 `duration` 或传 `-1` 自动时长时，因上游响应不返回实际成片时长，按其文档默认 5 秒计费。
 
 | 官方字段 | gravitex-sd 字段 | 状态 | 处理说明 |
 | --- | --- | --- | --- |
@@ -363,7 +363,7 @@ GET  https://api.gravitex.ai/v1/video/generations/{upstream_task_id}
 | `seed` | `seed` | 直接支持 | 显式 `0` 或 `-1` 会保留并发送 |
 | `draft_task` 及其他扩展字段 | - | 接收但忽略 | 不发送给上游 |
 
-查询完成时优先读取上游 `video_url`，并兼容读取顶层 `url`、`metadata.video_url` 和 `metadata.url`。只有成功状态且视频 URL 非空才停止轮询；非终态进度为 100% 时保存为 99%。视频 URL 直接保存到任务记录并返回，不下载视频文件。上游错误状态码可以返回，但错误消息统一替换为公共安全文案。
+查询完成时兼容上游 `{code, message, data}` 包装结构，优先读取 `data.video_url`，并兼容读取 `data.url`、`data.metadata.video_url`、`data.metadata.url` 和 `data.metadata.content.video_url`。只有成功状态且视频 URL 非空才停止轮询；非终态进度为 100% 时保存为 99%。视频 URL 直接保存到任务记录并返回，不下载视频文件。上游错误状态码可以返回，但错误消息统一替换为公共安全文案。
 
 ### 12.1 Gravitex 素材库内部托管
 

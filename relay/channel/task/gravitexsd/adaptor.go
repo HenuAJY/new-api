@@ -52,24 +52,30 @@ type upstreamRequest struct {
 }
 
 type taskResponse struct {
-	Code        string       `json:"code,omitempty"`
-	Message     string       `json:"message,omitempty"`
-	ID          string       `json:"id,omitempty"`
-	TaskID      string       `json:"task_id,omitempty"`
-	Model       string       `json:"model,omitempty"`
-	Status      string       `json:"status,omitempty"`
-	Progress    int          `json:"progress,omitempty"`
-	CreatedAt   int64        `json:"created_at,omitempty"`
-	CompletedAt int64        `json:"completed_at,omitempty"`
-	FailedAt    int64        `json:"failed_at,omitempty"`
-	URL         string       `json:"url,omitempty"`
-	VideoURL    string       `json:"video_url,omitempty"`
-	Metadata    taskMetadata `json:"metadata,omitempty"`
-	Error       *taskError   `json:"error,omitempty"`
+	Code        string        `json:"code,omitempty"`
+	Message     string        `json:"message,omitempty"`
+	Data        *taskResponse `json:"data,omitempty"`
+	ID          string        `json:"id,omitempty"`
+	TaskID      string        `json:"task_id,omitempty"`
+	Model       string        `json:"model,omitempty"`
+	Status      string        `json:"status,omitempty"`
+	Progress    int           `json:"progress,omitempty"`
+	CreatedAt   int64         `json:"created_at,omitempty"`
+	CompletedAt int64         `json:"completed_at,omitempty"`
+	FailedAt    int64         `json:"failed_at,omitempty"`
+	URL         string        `json:"url,omitempty"`
+	VideoURL    string        `json:"video_url,omitempty"`
+	Metadata    taskMetadata  `json:"metadata,omitempty"`
+	Error       *taskError    `json:"error,omitempty"`
 }
 
 type taskMetadata struct {
-	URL      string `json:"url,omitempty"`
+	URL      string              `json:"url,omitempty"`
+	VideoURL string              `json:"video_url,omitempty"`
+	Content  taskMetadataContent `json:"content,omitempty"`
+}
+
+type taskMetadataContent struct {
 	VideoURL string `json:"video_url,omitempty"`
 }
 
@@ -176,6 +182,25 @@ func (a *TaskAdaptor) ValidateRequestAndSetAction(c *gin.Context, info *relaycom
 		Size:    upstream.Ratio,
 	})
 	return nil
+}
+
+// EstimateBilling applies the configured per-second model price to the requested duration.
+// Automatic duration has no actual duration in the upstream response, so its documented
+// five-second default is used for both pre-charge and final task accounting.
+func (a *TaskAdaptor) EstimateBilling(c *gin.Context, _ *relaycommon.RelayInfo) map[string]float64 {
+	value, ok := c.Get("gravitexsd_task_request")
+	if !ok {
+		return nil
+	}
+	request, ok := value.(upstreamRequest)
+	if !ok {
+		return nil
+	}
+	duration := defaultDuration
+	if request.Duration != nil && int(*request.Duration) > 0 {
+		duration = int(*request.Duration)
+	}
+	return map[string]float64{"seconds": float64(duration)}
 }
 
 func (a *TaskAdaptor) BuildRequestURL(_ *relaycommon.RelayInfo) (string, error) {
@@ -468,8 +493,8 @@ func (a *TaskAdaptor) DoResponse(c *gin.Context, response *http.Response, info *
 	}
 	_ = response.Body.Close()
 
-	var result taskResponse
-	if err := common.Unmarshal(body, &result); err != nil {
+	result, err := decodeTaskResponse(body)
+	if err != nil {
 		return "", nil, service.TaskErrorWrapper(fmt.Errorf(publicFailureMessage), "invalid_upstream_response", responseStatus(response))
 	}
 	if response.StatusCode < http.StatusOK || response.StatusCode >= http.StatusMultipleChoices || result.Error != nil {
@@ -522,13 +547,13 @@ func (a *TaskAdaptor) FetchTask(baseURL, key string, body map[string]any, proxy 
 }
 
 func (a *TaskAdaptor) ParseTaskResult(body []byte) (*relaycommon.TaskInfo, error) {
-	var response taskResponse
-	if err := common.Unmarshal(body, &response); err != nil {
+	response, err := decodeTaskResponse(body)
+	if err != nil {
 		return nil, errors.Wrap(err, "unmarshal task result failed")
 	}
 	result := &relaycommon.TaskInfo{
 		Code:       0,
-		Url:        firstNonEmpty(response.VideoURL, response.URL, response.Metadata.VideoURL, response.Metadata.URL),
+		Url:        firstNonEmpty(response.VideoURL, response.URL, response.Metadata.VideoURL, response.Metadata.URL, response.Metadata.Content.VideoURL),
 		Progress:   normalizeProgress(response.Progress),
 		StartTime:  response.CreatedAt,
 		FinishTime: firstPositive(response.CompletedAt, response.FailedAt),
@@ -565,8 +590,7 @@ func (a *TaskAdaptor) ParseTaskResult(body []byte) (*relaycommon.TaskInfo, error
 }
 
 func (a *TaskAdaptor) ConvertToOpenAIVideo(task *model.Task) ([]byte, error) {
-	var response taskResponse
-	_ = common.Unmarshal(task.Data, &response)
+	response, _ := decodeTaskResponse(task.Data)
 	video := task.ToOpenAIVideo()
 	video.TaskID = task.TaskID
 	if task.Status == model.TaskStatusFailure {
@@ -580,8 +604,7 @@ func (a *TaskAdaptor) ConvertToOpenAIVideo(task *model.Task) ([]byte, error) {
 }
 
 func (a *TaskAdaptor) ConvertToSeedanceVideo(task *model.Task) ([]byte, error) {
-	var response taskResponse
-	_ = common.Unmarshal(task.Data, &response)
+	response, _ := decodeTaskResponse(task.Data)
 	result := dto.SeedanceTaskResponse{
 		ID:        task.TaskID,
 		Model:     task.Properties.OriginModelName,
@@ -796,6 +819,21 @@ func firstPositive(values ...int64) int64 {
 		}
 	}
 	return 0
+}
+
+func decodeTaskResponse(body []byte) (taskResponse, error) {
+	var response taskResponse
+	if err := common.Unmarshal(body, &response); err != nil {
+		return taskResponse{}, err
+	}
+	if response.Data == nil {
+		return response, nil
+	}
+	data := *response.Data
+	data.Code = firstNonEmpty(data.Code, response.Code)
+	data.Message = firstNonEmpty(data.Message, response.Message)
+	data.Data = nil
+	return data, nil
 }
 
 func responseStatus(response *http.Response) int {

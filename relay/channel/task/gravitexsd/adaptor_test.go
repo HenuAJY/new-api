@@ -60,7 +60,7 @@ func TestBuildRequestPreservesSupportedOfficialFields(t *testing.T) {
 	assert.NotContains(t, string(body), "draft_task")
 	assert.NotContains(t, string(body), "callback_url")
 	assert.NotContains(t, string(body), "return_last_frame")
-	assert.Nil(t, adaptor.EstimateBilling(context, info))
+	assert.Equal(t, map[string]float64{"seconds": 15}, adaptor.EstimateBilling(context, info))
 }
 
 func newAssetTestServer(t *testing.T) *httptest.Server {
@@ -112,10 +112,21 @@ func TestBuildRequestSupportsPromptAutoDurationAndArbitraryMappedModel(t *testin
 		"resolution":"480p","ratio":"21:9"
 	}`, string(body))
 	assert.Equal(t, []string{"seedance-2-0", "seedance-2-0-fast"}, adaptor.GetModelList())
+	assert.Equal(t, map[string]float64{"seconds": 5}, adaptor.EstimateBilling(context, info))
 
 	requestURL, err := adaptor.BuildRequestURL(info)
 	require.NoError(t, err)
 	assert.Equal(t, "https://api.gravitex.ai/v1/video/generations", requestURL)
+}
+
+func TestEstimateBillingUsesDefaultForAutomaticDuration(t *testing.T) {
+	context := testContext(`{"model":"any-downstream-model","prompt":"generate","duration":-1}`)
+	info := testRelayInfo()
+	adaptor := &TaskAdaptor{}
+	adaptor.Init(info)
+	require.Nil(t, adaptor.ValidateRequestAndSetAction(context, info))
+
+	assert.Equal(t, map[string]float64{"seconds": 5}, adaptor.EstimateBilling(context, info))
 }
 
 func TestValidateRequestEnforcesGravitexRules(t *testing.T) {
@@ -201,6 +212,23 @@ func TestParseTaskResultRequiresVideoURLForCompletion(t *testing.T) {
 	}`))
 	require.NoError(t, err)
 	assert.Equal(t, "https://cdn.example/fallback.mp4", result.Url)
+}
+
+func TestParseTaskResultUnwrapsGravitexDataEnvelope(t *testing.T) {
+	result, err := (&TaskAdaptor{}).ParseTaskResult([]byte(`{
+		"code":"success","message":"","data":{
+			"id":"cgt-task","status":"completed","progress":100,
+			"created_at":1785077777,"completed_at":1785077998,
+			"metadata":{"content":{"video_url":"https://cdn.example/enveloped.mp4"}},
+			"seconds":"4"
+		}
+	}`))
+	require.NoError(t, err)
+	assert.Equal(t, model.TaskStatusSuccess, result.Status)
+	assert.Equal(t, taskcommon.ProgressComplete, result.Progress)
+	assert.Equal(t, "https://cdn.example/enveloped.mp4", result.Url)
+	assert.Equal(t, int64(1785077777), result.StartTime)
+	assert.Equal(t, int64(1785077998), result.FinishTime)
 }
 
 func TestParseInProgressTaskClampsCompleteProgress(t *testing.T) {
