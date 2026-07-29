@@ -27,6 +27,7 @@ type submitRequest struct {
 	Content     []dto.SeedanceContentItem `json:"content,omitempty"`
 	Duration    *dto.IntValue             `json:"duration,omitempty"`
 	Seconds     *dto.IntValue             `json:"seconds,omitempty"`
+	Ratio       string                    `json:"ratio,omitempty"`
 	AspectRatio string                    `json:"aspect_ratio,omitempty"`
 	Size        string                    `json:"size,omitempty"`
 	Resolution  string                    `json:"resolution,omitempty"`
@@ -99,16 +100,7 @@ func (a *TaskAdaptor) ValidateRequestAndSetAction(c *gin.Context, info *relaycom
 		return service.TaskErrorWrapperLocal(err, "invalid_request", http.StatusBadRequest)
 	}
 
-	upstream := upstreamRequest{
-		Prompt: strings.TrimSpace(request.Prompt),
-		Size:   strings.TrimSpace(request.Size),
-	}
-	if upstream.Prompt == "" {
-		return service.TaskErrorWrapperLocal(fmt.Errorf("prompt is required"), "invalid_request", http.StatusBadRequest)
-	}
-	if len([]rune(upstream.Prompt)) > 5000 {
-		return service.TaskErrorWrapperLocal(fmt.Errorf("prompt must not exceed 5000 characters"), "invalid_request", http.StatusBadRequest)
-	}
+	upstream := upstreamRequest{Prompt: strings.TrimSpace(request.Prompt), Size: strings.TrimSpace(request.Size)}
 
 	upstream.Duration = request.Duration
 	if upstream.Duration == nil {
@@ -117,8 +109,8 @@ func (a *TaskAdaptor) ValidateRequestAndSetAction(c *gin.Context, info *relaycom
 	if upstream.Duration != nil && (int(*upstream.Duration) < 4 || int(*upstream.Duration) > 15) {
 		return service.TaskErrorWrapperLocal(fmt.Errorf("duration must be between 4 and 15 seconds"), "invalid_request", http.StatusBadRequest)
 	}
-	if isSupportedAspectRatio(request.AspectRatio) {
-		upstream.AspectRatio = request.AspectRatio
+	if aspectRatio := firstNonEmpty(request.AspectRatio, request.Ratio); isSupportedAspectRatio(aspectRatio) {
+		upstream.AspectRatio = aspectRatio
 	}
 	if strings.EqualFold(request.Resolution, "720p") {
 		upstream.Resolution = "720p"
@@ -127,6 +119,10 @@ func (a *TaskAdaptor) ValidateRequestAndSetAction(c *gin.Context, info *relaycom
 	if len(request.Content) > 0 {
 		for _, item := range request.Content {
 			switch item.Type {
+			case "text":
+				if text := strings.TrimSpace(item.Text); upstream.Prompt == "" && text != "" {
+					upstream.Prompt = text
+				}
 			case "image_url":
 				if item.ImageURL == nil {
 					continue
@@ -161,6 +157,12 @@ func (a *TaskAdaptor) ValidateRequestAndSetAction(c *gin.Context, info *relaycom
 		for _, url := range request.Audios {
 			upstream.AudioReference = appendReference(upstream.AudioReference, url)
 		}
+	}
+	if upstream.Prompt == "" {
+		return service.TaskErrorWrapperLocal(fmt.Errorf("prompt is required"), "invalid_request", http.StatusBadRequest)
+	}
+	if len([]rune(upstream.Prompt)) > 5000 {
+		return service.TaskErrorWrapperLocal(fmt.Errorf("prompt must not exceed 5000 characters"), "invalid_request", http.StatusBadRequest)
 	}
 
 	if len(upstream.ImageURLs) > 4 {

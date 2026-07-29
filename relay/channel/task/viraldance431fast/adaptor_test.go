@@ -57,6 +57,41 @@ func TestBuildRequestMapsOfficialSeedanceContent(t *testing.T) {
 	assert.Nil(t, adaptor.EstimateBilling(context, info))
 }
 
+func TestBuildRequestMapsOfficialContentPromptAndRatio(t *testing.T) {
+	context := testContext(`{
+		"model":"hjsv-viraldance431-fast-480p",
+		"content":[
+			{"type":"text","text":"图1人物和图2人物在KTV唱歌"},
+			{"type":"image_url","image_url":{"url":"https://naoos.tos-cn-shanghai.volces.com/%E7%9C%9F%E4%BA%BA/1f8a65daf8174f79ace65d49f2266b57.png"},"role":"reference_image"},
+			{"type":"image_url","image_url":{"url":"https://naoos.tos-cn-shanghai.volces.com/%E7%9C%9F%E4%BA%BA/1cb0bf847d7a46c0915965d1418ffe33.png"},"role":"reference_image"}
+		],
+		"resolution":"720p","ratio":"16:9","duration":4,
+		"generate_audio":true,"watermark":false,"priority":0
+	}`)
+	info := testRelayInfo()
+	info.OriginModelName = "hjsv-viraldance431-fast-480p"
+	info.UpstreamModelName = "viraldance431-fast"
+	adaptor := &TaskAdaptor{}
+	adaptor.Init(info)
+	require.Nil(t, adaptor.ValidateRequestAndSetAction(context, info))
+
+	bodyReader, err := adaptor.BuildRequestBody(context, info)
+	require.NoError(t, err)
+	body, err := io.ReadAll(bodyReader)
+	require.NoError(t, err)
+	assert.JSONEq(t, `{
+		"model":"viraldance431-fast","prompt":"图1人物和图2人物在KTV唱歌",
+		"duration":4,"aspect_ratio":"16:9","resolution":"720p",
+		"image_urls":[
+			"https://naoos.tos-cn-shanghai.volces.com/%E7%9C%9F%E4%BA%BA/1f8a65daf8174f79ace65d49f2266b57.png",
+			"https://naoos.tos-cn-shanghai.volces.com/%E7%9C%9F%E4%BA%BA/1cb0bf847d7a46c0915965d1418ffe33.png"
+		]
+	}`, string(body))
+	assert.NotContains(t, string(body), "generate_audio")
+	assert.NotContains(t, string(body), "watermark")
+	assert.NotContains(t, string(body), "priority")
+}
+
 func TestBuildRequestDoesNotValidateOrFixModelName(t *testing.T) {
 	context := testContext(`{"model":"arbitrary-downstream-model","prompt":"generate","seconds":"5"}`)
 	info := testRelayInfo()
