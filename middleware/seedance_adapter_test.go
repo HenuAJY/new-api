@@ -85,3 +85,19 @@ func TestSeedanceRequestConvertAcceptsOfficialFieldsUnsupportedByMoyin(t *testin
 	assert.Equal(t, []any{"https://cdn.example/first.png"}, response["images"])
 	assert.Len(t, response["content"], 4)
 }
+
+func TestSeedanceRequestConvertAcceptsImageOnlyOfficialRequest(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	engine := gin.New()
+	engine.POST("/api/v3/contents/generations/tasks", SeedanceRequestConvert(), func(c *gin.Context) {
+		c.Status(http.StatusNoContent)
+	})
+	request := httptest.NewRequest(http.MethodPost, "/api/v3/contents/generations/tasks", strings.NewReader(`{
+		"model":"endpoint-id",
+		"content":[{"type":"image_url","image_url":{"url":"https://cdn.example/first.png"},"role":"first_frame"}]
+	}`))
+	request.Header.Set("Content-Type", "application/json")
+	recorder := httptest.NewRecorder()
+	engine.ServeHTTP(recorder, request)
+	assert.Equal(t, http.StatusNoContent, recorder.Code)
+}

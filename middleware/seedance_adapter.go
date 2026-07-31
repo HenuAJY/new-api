@@ -39,6 +39,7 @@ func SeedanceRequestConvert() func(c *gin.Context) {
 		images := make([]string, 0)
 		videos := make([]string, 0)
 		audios := make([]string, 0)
+		hasDraftTask := false
 		for _, item := range request.Content {
 			switch item.Type {
 			case "text":
@@ -67,8 +68,7 @@ func SeedanceRequestConvert() func(c *gin.Context) {
 				}
 				audios = append(audios, item.AudioURL.URL)
 			case "draft_task":
-				// Preserve the official content item without projecting it into the
-				// provider-neutral media fields.
+				hasDraftTask = item.DraftTask != nil && strings.TrimSpace(item.DraftTask.ID) != ""
 			default:
 				c.AbortWithStatusJSON(http.StatusBadRequest, dto.TaskError{Code: "unsupported_content_type", Message: fmt.Sprintf("content type %s is not supported", item.Type)})
 				return
@@ -76,8 +76,8 @@ func SeedanceRequestConvert() func(c *gin.Context) {
 		}
 
 		prompt := strings.Join(prompts, "\n")
-		if prompt == "" {
-			c.AbortWithStatusJSON(http.StatusBadRequest, dto.TaskError{Code: "invalid_request", Message: "text content is required"})
+		if prompt == "" && len(images) == 0 && len(videos) == 0 && !hasDraftTask {
+			c.AbortWithStatusJSON(http.StatusBadRequest, dto.TaskError{Code: "invalid_request", Message: "content must include text, image, video, or draft_task"})
 			return
 		}
 		if len(audios) > 0 && len(images) == 0 && len(videos) == 0 {

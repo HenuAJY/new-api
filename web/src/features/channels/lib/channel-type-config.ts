@@ -204,6 +204,25 @@ export const CHANNEL_TYPE_CONFIGS: Record<number, ChannelTypeConfig> = {
     icon: 'openai',
     defaultBaseUrl: 'https://api.gravitex.ai',
   },
+  9809: {
+    id: 9809,
+    name: CHANNEL_TYPES[9809],
+    icon: 'Volcengine',
+    defaultBaseUrl: 'https://ark.cn-beijing.volces.com',
+    supportedModels: [
+      'doubao-seedance-1-0-pro-250528',
+      'doubao-seedance-1-0-lite-t2v',
+      'doubao-seedance-1-0-lite-i2v',
+      'doubao-seedance-1-5-pro-251215',
+      'doubao-seedance-2-0-260128',
+      'doubao-seedance-2-0-fast-260128',
+    ],
+    hints: {
+      baseUrl: 'Default: https://ark.cn-beijing.volces.com',
+      key: 'Volcengine Ark API Key',
+      models: 'Volcengine video model or endpoint IDs',
+    },
+  },
 }
 
 /**

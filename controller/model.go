@@ -16,6 +16,7 @@ import (
 	"github.com/QuantumNous/new-api/relay/channel/moonshot"
 	"github.com/QuantumNous/new-api/relay/channel/task/aicost"
 	"github.com/QuantumNous/new-api/relay/channel/task/apimart"
+	"github.com/QuantumNous/new-api/relay/channel/task/volcvideo"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
 	"github.com/QuantumNous/new-api/relay/helper"
 	"github.com/QuantumNous/new-api/relaykit/dto"
@@ -66,6 +67,11 @@ func init() {
 			OwnedBy: apimart.ChannelName,
 		})
 	}
+	for _, modelName := range volcvideo.ModelList {
+		openAIModels = append(openAIModels, dto.OpenAIModels{
+			Id: modelName, Object: "model", Created: 1626777600, OwnedBy: volcvideo.ChannelName,
+		})
+	}
 	for _, modelName := range ai360.ModelList {
 		openAIModels = append(openAIModels, dto.OpenAIModels{
 			Id:      modelName,
@@ -113,6 +119,7 @@ func init() {
 	channelId2Models = make(map[int][]string)
 	channelId2Models[constant.ChannelTypeAicost] = aicost.ModelList
 	channelId2Models[constant.ChannelTypeAPIMart] = apimart.ModelList
+	channelId2Models[constant.ChannelTypeVolcVideo] = volcvideo.ModelList
 	for i := 1; i <= constant.ChannelTypeDummy; i++ {
 		if _, exists := channelId2Models[i]; exists {
 			continue

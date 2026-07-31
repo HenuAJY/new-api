@@ -71,6 +71,7 @@ const (
 	ChannelTypeGravitexSD        = 9806
 	ChannelTypeAicost            = 9807
 	ChannelTypeAPIMart           = 9808
+	ChannelTypeVolcVideo         = 9809
 )
 
 var ChannelBaseURLs = []string{
@@ -210,6 +211,7 @@ var ChannelTypeNames = map[int]string{
 	ChannelTypeGravitexSD:        "gravitex-sd",
 	ChannelTypeAicost:            "Aicost",
 	ChannelTypeAPIMart:           "APIMart",
+	ChannelTypeVolcVideo:         "Volcengine Video",
 }
 
 func GetChannelTypeName(channelType int) string {
