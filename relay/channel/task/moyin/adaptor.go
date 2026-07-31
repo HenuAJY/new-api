@@ -11,11 +11,12 @@ import (
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/constant"
-	"github.com/QuantumNous/new-api/dto"
+	taskdto "github.com/QuantumNous/new-api/dto"
 	"github.com/QuantumNous/new-api/model"
 	"github.com/QuantumNous/new-api/relay/channel"
 	"github.com/QuantumNous/new-api/relay/channel/task/taskcommon"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
+	"github.com/QuantumNous/new-api/relaykit/dto"
 	"github.com/QuantumNous/new-api/service"
 	"github.com/gin-gonic/gin"
 	"github.com/pkg/errors"
@@ -74,7 +75,7 @@ func (a *TaskAdaptor) Init(info *relaycommon.RelayInfo) {
 	a.baseURL = strings.TrimRight(info.ChannelBaseUrl, "/")
 }
 
-func (a *TaskAdaptor) ValidateRequestAndSetAction(c *gin.Context, info *relaycommon.RelayInfo) *dto.TaskError {
+func (a *TaskAdaptor) ValidateRequestAndSetAction(c *gin.Context, info *relaycommon.RelayInfo) *taskdto.TaskError {
 	var request submitRequest
 	if err := common.UnmarshalBodyReusable(c, &request); err != nil {
 		return service.TaskErrorWrapperLocal(err, "invalid_request", http.StatusBadRequest)
@@ -147,7 +148,7 @@ func (a *TaskAdaptor) DoRequest(c *gin.Context, info *relaycommon.RelayInfo, req
 	return channel.DoTaskApiRequest(a, c, info, requestBody)
 }
 
-func (a *TaskAdaptor) DoResponse(c *gin.Context, response *http.Response, info *relaycommon.RelayInfo) (string, []byte, *dto.TaskError) {
+func (a *TaskAdaptor) DoResponse(c *gin.Context, response *http.Response, info *relaycommon.RelayInfo) (string, []byte, *taskdto.TaskError) {
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
 		return "", nil, service.TaskErrorWrapper(err, "read_response_body_failed", http.StatusInternalServerError)
@@ -167,7 +168,7 @@ func (a *TaskAdaptor) DoResponse(c *gin.Context, response *http.Response, info *
 	}
 
 	if c.GetBool("seedance_api") {
-		c.JSON(http.StatusOK, dto.SeedanceCreateResponse{ID: info.PublicTaskID})
+		c.JSON(http.StatusOK, taskdto.SeedanceCreateResponse{ID: info.PublicTaskID})
 	} else {
 		video := dto.NewOpenAIVideo()
 		video.ID = info.PublicTaskID
@@ -265,7 +266,7 @@ func (a *TaskAdaptor) ConvertToOpenAIVideo(task *model.Task) ([]byte, error) {
 func (a *TaskAdaptor) ConvertToSeedanceVideo(task *model.Task) ([]byte, error) {
 	var response taskResponse
 	_ = common.Unmarshal(task.Data, &response)
-	result := dto.SeedanceTaskResponse{
+	result := taskdto.SeedanceTaskResponse{
 		ID: task.TaskID, Model: task.Properties.OriginModelName,
 		Status: toSeedanceStatus(task.Status), CreatedAt: task.CreatedAt,
 		UpdatedAt: task.UpdatedAt,
@@ -278,7 +279,7 @@ func (a *TaskAdaptor) ConvertToSeedanceVideo(task *model.Task) ([]byte, error) {
 		result.Duration = &seconds
 	}
 	if task.Status == model.TaskStatusFailure {
-		result.Error = &dto.SeedanceTaskError{Message: publicFailureMessage}
+		result.Error = &taskdto.SeedanceTaskError{Message: publicFailureMessage}
 		if response.Error != nil {
 			result.Error.Code = response.Error.Code
 		}

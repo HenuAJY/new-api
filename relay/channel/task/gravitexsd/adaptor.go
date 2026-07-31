@@ -13,42 +13,43 @@ import (
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/constant"
-	"github.com/QuantumNous/new-api/dto"
+	taskdto "github.com/QuantumNous/new-api/dto"
 	"github.com/QuantumNous/new-api/model"
 	"github.com/QuantumNous/new-api/relay/channel"
 	"github.com/QuantumNous/new-api/relay/channel/task/taskcommon"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
+	"github.com/QuantumNous/new-api/relaykit/dto"
 	"github.com/QuantumNous/new-api/service"
 	"github.com/gin-gonic/gin"
 	"github.com/pkg/errors"
 )
 
 type submitRequest struct {
-	Model         string                    `json:"model"`
-	Prompt        string                    `json:"prompt,omitempty"`
-	Content       []dto.SeedanceContentItem `json:"content,omitempty"`
-	Duration      *dto.IntValue             `json:"duration,omitempty"`
-	Seconds       *dto.IntValue             `json:"seconds,omitempty"`
-	Resolution    string                    `json:"resolution,omitempty"`
-	Ratio         string                    `json:"ratio,omitempty"`
-	GenerateAudio *dto.BoolValue            `json:"generate_audio,omitempty"`
-	Watermark     *dto.BoolValue            `json:"watermark,omitempty"`
-	Seed          *dto.IntValue             `json:"seed,omitempty"`
-	Images        []string                  `json:"images,omitempty"`
-	Videos        []string                  `json:"videos,omitempty"`
-	Audios        []string                  `json:"audios,omitempty"`
+	Model         string                        `json:"model"`
+	Prompt        string                        `json:"prompt,omitempty"`
+	Content       []taskdto.SeedanceContentItem `json:"content,omitempty"`
+	Duration      *dto.IntValue                 `json:"duration,omitempty"`
+	Seconds       *dto.IntValue                 `json:"seconds,omitempty"`
+	Resolution    string                        `json:"resolution,omitempty"`
+	Ratio         string                        `json:"ratio,omitempty"`
+	GenerateAudio *dto.BoolValue                `json:"generate_audio,omitempty"`
+	Watermark     *dto.BoolValue                `json:"watermark,omitempty"`
+	Seed          *dto.IntValue                 `json:"seed,omitempty"`
+	Images        []string                      `json:"images,omitempty"`
+	Videos        []string                      `json:"videos,omitempty"`
+	Audios        []string                      `json:"audios,omitempty"`
 }
 
 type upstreamRequest struct {
-	Model         string                    `json:"model"`
-	Prompt        string                    `json:"prompt,omitempty"`
-	Content       []dto.SeedanceContentItem `json:"content,omitempty"`
-	Duration      *dto.IntValue             `json:"duration,omitempty"`
-	Resolution    string                    `json:"resolution,omitempty"`
-	Ratio         string                    `json:"ratio,omitempty"`
-	GenerateAudio *dto.BoolValue            `json:"generate_audio,omitempty"`
-	Watermark     *dto.BoolValue            `json:"watermark,omitempty"`
-	Seed          *dto.IntValue             `json:"seed,omitempty"`
+	Model         string                        `json:"model"`
+	Prompt        string                        `json:"prompt,omitempty"`
+	Content       []taskdto.SeedanceContentItem `json:"content,omitempty"`
+	Duration      *dto.IntValue                 `json:"duration,omitempty"`
+	Resolution    string                        `json:"resolution,omitempty"`
+	Ratio         string                        `json:"ratio,omitempty"`
+	GenerateAudio *dto.BoolValue                `json:"generate_audio,omitempty"`
+	Watermark     *dto.BoolValue                `json:"watermark,omitempty"`
+	Seed          *dto.IntValue                 `json:"seed,omitempty"`
 }
 
 type taskResponse struct {
@@ -125,7 +126,7 @@ func (a *TaskAdaptor) Init(info *relaycommon.RelayInfo) {
 	}
 }
 
-func (a *TaskAdaptor) ValidateRequestAndSetAction(c *gin.Context, info *relaycommon.RelayInfo) *dto.TaskError {
+func (a *TaskAdaptor) ValidateRequestAndSetAction(c *gin.Context, info *relaycommon.RelayInfo) *taskdto.TaskError {
 	var request submitRequest
 	if err := common.UnmarshalBodyReusable(c, &request); err != nil {
 		return service.TaskErrorWrapperLocal(err, "invalid_request", http.StatusBadRequest)
@@ -239,7 +240,7 @@ func (a *TaskAdaptor) BuildRequestBody(c *gin.Context, info *relaycommon.RelayIn
 	return bytes.NewReader(body), nil
 }
 
-func (a *TaskAdaptor) prepareAssetContent(c *gin.Context, info *relaycommon.RelayInfo, content []dto.SeedanceContentItem) ([]dto.SeedanceContentItem, error) {
+func (a *TaskAdaptor) prepareAssetContent(c *gin.Context, info *relaycommon.RelayInfo, content []taskdto.SeedanceContentItem) ([]taskdto.SeedanceContentItem, error) {
 	if len(content) == 0 {
 		return content, nil
 	}
@@ -247,7 +248,7 @@ func (a *TaskAdaptor) prepareAssetContent(c *gin.Context, info *relaycommon.Rela
 	if err != nil {
 		return nil, err
 	}
-	prepared := make([]dto.SeedanceContentItem, len(content))
+	prepared := make([]taskdto.SeedanceContentItem, len(content))
 	copy(prepared, content)
 	for i := range prepared {
 		item := &prepared[i]
@@ -438,7 +439,7 @@ func (a *TaskAdaptor) waitForAsset(c *gin.Context, client *http.Client, virtualI
 	}
 }
 
-func contentAssetTypeAndURL(item dto.SeedanceContentItem) (string, string) {
+func contentAssetTypeAndURL(item taskdto.SeedanceContentItem) (string, string) {
 	switch item.Type {
 	case "image_url":
 		if item.ImageURL != nil {
@@ -456,7 +457,7 @@ func contentAssetTypeAndURL(item dto.SeedanceContentItem) (string, string) {
 	return "", ""
 }
 
-func setContentAssetURL(item *dto.SeedanceContentItem, assetURL string) {
+func setContentAssetURL(item *taskdto.SeedanceContentItem, assetURL string) {
 	switch item.Type {
 	case "image_url":
 		if item.ImageURL != nil {
@@ -486,7 +487,7 @@ func (a *TaskAdaptor) DoRequest(c *gin.Context, info *relaycommon.RelayInfo, req
 	return channel.DoTaskApiRequest(a, c, info, requestBody)
 }
 
-func (a *TaskAdaptor) DoResponse(c *gin.Context, response *http.Response, info *relaycommon.RelayInfo) (string, []byte, *dto.TaskError) {
+func (a *TaskAdaptor) DoResponse(c *gin.Context, response *http.Response, info *relaycommon.RelayInfo) (string, []byte, *taskdto.TaskError) {
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
 		return "", nil, service.TaskErrorWrapper(err, "read_response_body_failed", http.StatusInternalServerError)
@@ -510,7 +511,7 @@ func (a *TaskAdaptor) DoResponse(c *gin.Context, response *http.Response, info *
 	}
 
 	if c.GetBool("seedance_api") {
-		c.JSON(http.StatusOK, dto.SeedanceCreateResponse{ID: info.PublicTaskID})
+		c.JSON(http.StatusOK, taskdto.SeedanceCreateResponse{ID: info.PublicTaskID})
 	} else {
 		video := dto.NewOpenAIVideo()
 		video.ID = info.PublicTaskID
@@ -605,7 +606,7 @@ func (a *TaskAdaptor) ConvertToOpenAIVideo(task *model.Task) ([]byte, error) {
 
 func (a *TaskAdaptor) ConvertToSeedanceVideo(task *model.Task) ([]byte, error) {
 	response, _ := decodeTaskResponse(task.Data)
-	result := dto.SeedanceTaskResponse{
+	result := taskdto.SeedanceTaskResponse{
 		ID:        task.TaskID,
 		Model:     task.Properties.OriginModelName,
 		Status:    toSeedanceStatus(task.Status),
@@ -616,7 +617,7 @@ func (a *TaskAdaptor) ConvertToSeedanceVideo(task *model.Task) ([]byte, error) {
 		result.Content.VideoURL = task.GetResultURL()
 	}
 	if task.Status == model.TaskStatusFailure {
-		result.Error = &dto.SeedanceTaskError{Message: publicFailureMessage}
+		result.Error = &taskdto.SeedanceTaskError{Message: publicFailureMessage}
 		if response.Error != nil {
 			result.Error.Code = response.Error.Code
 		}
@@ -628,7 +629,7 @@ func (a *TaskAdaptor) GetModelList() []string { return ModelList }
 
 func (a *TaskAdaptor) GetChannelName() string { return ChannelName }
 
-func validateContent(content []dto.SeedanceContentItem) *dto.TaskError {
+func validateContent(content []taskdto.SeedanceContentItem) *taskdto.TaskError {
 	var textItems, firstFrames, lastFrames, referenceImages, referenceVideos, referenceAudios, visualReferences int
 	for _, item := range content {
 		switch item.Type {
@@ -697,8 +698,8 @@ func validateContent(content []dto.SeedanceContentItem) *dto.TaskError {
 	return nil
 }
 
-func supportedContent(content []dto.SeedanceContentItem) []dto.SeedanceContentItem {
-	result := make([]dto.SeedanceContentItem, 0, len(content))
+func supportedContent(content []taskdto.SeedanceContentItem) []taskdto.SeedanceContentItem {
+	result := make([]taskdto.SeedanceContentItem, 0, len(content))
 	for _, item := range content {
 		switch item.Type {
 		case "text", "image_url", "video_url", "audio_url":
@@ -708,27 +709,27 @@ func supportedContent(content []dto.SeedanceContentItem) []dto.SeedanceContentIt
 	return result
 }
 
-func legacyContent(images, videos, audios []string) []dto.SeedanceContentItem {
-	content := make([]dto.SeedanceContentItem, 0, len(images)+len(videos)+len(audios))
+func legacyContent(images, videos, audios []string) []taskdto.SeedanceContentItem {
+	content := make([]taskdto.SeedanceContentItem, 0, len(images)+len(videos)+len(audios))
 	for _, url := range images {
 		if url = strings.TrimSpace(url); url != "" {
-			content = append(content, dto.SeedanceContentItem{Type: "image_url", ImageURL: &dto.SeedanceMediaURL{URL: url}, Role: "reference_image"})
+			content = append(content, taskdto.SeedanceContentItem{Type: "image_url", ImageURL: &taskdto.SeedanceMediaURL{URL: url}, Role: "reference_image"})
 		}
 	}
 	for _, url := range videos {
 		if url = strings.TrimSpace(url); url != "" {
-			content = append(content, dto.SeedanceContentItem{Type: "video_url", VideoURL: &dto.SeedanceMediaURL{URL: url}, Role: "reference_video"})
+			content = append(content, taskdto.SeedanceContentItem{Type: "video_url", VideoURL: &taskdto.SeedanceMediaURL{URL: url}, Role: "reference_video"})
 		}
 	}
 	for _, url := range audios {
 		if url = strings.TrimSpace(url); url != "" {
-			content = append(content, dto.SeedanceContentItem{Type: "audio_url", AudioURL: &dto.SeedanceMediaURL{URL: url}, Role: "reference_audio"})
+			content = append(content, taskdto.SeedanceContentItem{Type: "audio_url", AudioURL: &taskdto.SeedanceMediaURL{URL: url}, Role: "reference_audio"})
 		}
 	}
 	return content
 }
 
-func contentImageURLs(content []dto.SeedanceContentItem) []string {
+func contentImageURLs(content []taskdto.SeedanceContentItem) []string {
 	urls := make([]string, 0)
 	for _, item := range content {
 		if item.Type == "image_url" && item.ImageURL != nil && strings.TrimSpace(item.ImageURL.URL) != "" {
@@ -738,7 +739,7 @@ func contentImageURLs(content []dto.SeedanceContentItem) []string {
 	return urls
 }
 
-func firstText(content []dto.SeedanceContentItem, fallback string) string {
+func firstText(content []taskdto.SeedanceContentItem, fallback string) string {
 	for _, item := range content {
 		if item.Type == "text" && strings.TrimSpace(item.Text) != "" {
 			return item.Text
